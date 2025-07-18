@@ -12,7 +12,12 @@
     // If you want to use baseUrl, it might look like this:
     "baseUrl": "./src", // This sets the base directory for module resolution
     "paths": {
-      "@config/*": ["config/*"] // Example of path mapping
+      "@config/*": ["config/*"], // Example of path mapping
+      "@controllers/*": ["main/controllers/*"],
+      "@services/*": ["main/services/*"],
+      "@routes/*": ["main/routes/*"],
+      "@models/*": ["main/models/*"],
+      "@middlewares/*": ["main/middlewares/*"]
     }
   },
   "include": ["src/**/*"],
