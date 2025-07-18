@@ -1,7 +1,7 @@
 
 # 📌 Proyecto Node.js + TypeScript + Express
 
-Este proyecto es una base para desarrollar APIs REST utilizando Node.js, TypeScript y Express, estructurado para mantener el código limpio, escalable y fácil de mantener.
+Este proyecto es para desarrollar el proyecto final 2025 con APIs REST utilizando Node.js, TypeScript y Express, estructurado para mantener el código limpio, escalable y fácil de mantener.
 
 ---
 
