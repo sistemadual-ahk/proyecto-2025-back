@@ -24,6 +24,18 @@ export class ValidationError extends CustomError {
   }
 }
 
+export class NotFoundError extends CustomError {
+  constructor(message: string) {
+    super(message, 404);
+  }
+}
+
+export class ConflictError extends CustomError {
+  constructor(message: string) {
+    super(message, 409);
+  }
+}
+
 export const errorHandler = (
   error: AppError,
   _req: Request,
