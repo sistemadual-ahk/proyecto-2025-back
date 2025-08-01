@@ -1,20 +1,19 @@
 import express from "express";
-import saludoRoutes from "@routes/saludo.routes";
+import { routes } from "@routes/routes";
+import { errorHandler } from "@middlewares/error.middleware";
 
 const app = express();
 app.set("trust proxy", true);
 app.use(express.json());
 
 // Middleware de log
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`Método: ${req.method} - URL: ${req.url}`);
   next();
 });
 
-// Rutas a USAR----> Aquí se definen las rutas a utilizar de la aplicación.
-const routes = [
-  { path: "/api/saludos", handler: saludoRoutes },
-];
 routes.forEach(route => app.use(route.path, route.handler));
+
+app.use(errorHandler);
 
 export default app;

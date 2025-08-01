@@ -1,25 +1,57 @@
-// tsconfig.json
 {
   "compilerOptions": {
-    "target": "es2021",
-    "module": "commonjs", // Or "esnext" if you're using ES Modules
-    "rootDir": "./src", // Specifies the root directory of your source files
-    "outDir": "./dist", // Where your compiled JS files will go
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "rootDir": "./src",
+    "outDir": "./dist",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    // If you want to use baseUrl, it might look like this:
-    "baseUrl": "./src", // This sets the base directory for module resolution
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": false,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "baseUrl": "./src",
     "paths": {
-      "@config/*": ["config/*"], // Example of path mapping
+      "@config/*": ["config/*"],
       "@controllers/*": ["main/controllers/*"],
       "@services/*": ["main/services/*"],
       "@routes/*": ["main/routes/*"],
       "@models/*": ["main/models/*"],
-      "@middlewares/*": ["main/middlewares/*"]
-    }
+      "@middlewares/*": ["main/middlewares/*"],
+      "@utils/*": ["utils/*"],
+      "@types/*": ["types/*"]
+    },
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "allowJs": false,
+    "checkJs": false,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*",
+    "src/**/*.json"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  }
 }
