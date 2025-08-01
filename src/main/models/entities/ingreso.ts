@@ -1,10 +1,13 @@
 import { Categoria } from "./categoria";
+import { Moneda } from "./moneda";
 
 export class Gasto {
     id: string;
-    descripcion: string;
     monto: number;
-    categoria: Categoria;
+    moneda: Moneda;
     fecha: Date;
+    descripcion: string;
+    categoria: Categoria;
+    billetera: Billetera;
     usuarioId: string;
 }
