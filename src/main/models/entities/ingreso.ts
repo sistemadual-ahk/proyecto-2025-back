@@ -1,13 +1,13 @@
+import { Billetera } from "./billetera";
 import { Categoria } from "./categoria";
-import { Moneda } from "./moneda";
+import { Usuario } from "./Usuario";
 
-export class Ingreso {
+export class Gasto {
     id: string;
-    monto: number;
-    moneda: Moneda;
-    fecha: Date;
     descripcion: string;
+    monto: number;
     categoria: Categoria;
     billetera: Billetera;
-    usuarioId: string;
+    fecha: Date;
+    user: Usuario;
 }
