@@ -1,5 +1,5 @@
 import express from "express";
-import saludoRoutes from "@routes/saludo.routes";
+import saludoRoutes from "./routes/saludo.routes";
 
 const app = express();
 app.set("trust proxy", true);

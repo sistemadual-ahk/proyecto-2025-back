@@ -1,5 +1,5 @@
 import express from "express";
-import { saludoInicial, saludarNombre } from "@controllers/saludo.controller";
+import { saludoInicial, saludarNombre } from "../controllers/saludo.controller";
 
 const router = express.Router();
 

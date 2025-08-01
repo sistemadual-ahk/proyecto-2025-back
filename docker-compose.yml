@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Usar variables de entorno del archivo .env
+      - MONGODB_URI=${MONGODB_URI}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Servicio para desarrollo (opcional)
+  app-dev:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      # Usar variables de entorno del archivo .env
+      - MONGODB_URI=${MONGODB_URI}
+    volumes:
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+    restart: unless-stopped
+    networks:
+      - app-network
+    profiles:
+      - dev
+
+networks:
+  app-network:
+    driver: bridge 
