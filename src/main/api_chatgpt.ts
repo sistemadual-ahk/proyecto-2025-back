@@ -97,6 +97,6 @@ async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio', datos:
 
 
 // Ejemplo de cómo llamar a la función
-procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
-// procesarEntrada('imagen', './ticket.png');
+//procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
+//procesarEntrada('imagen', './ticket.png');
 // procesarEntrada('audio', './gasto.mp3');
