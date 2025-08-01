@@ -1,7 +1,7 @@
 import { Categoria } from "./categoria";
 import { Moneda } from "./moneda";
 
-export class Gasto {
+export class Ingreso {
     id: string;
     monto: number;
     moneda: Moneda;
