@@ -25,16 +25,16 @@ export class OperacionService {
         if (monto !== 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
-    
+    //verificadorzod 
         const nuevaOperacion = new Operacion();
         nuevaOperacion.monto = monto;
         nuevaOperacion.descripcion = descripcion;
         nuevaOperacion.fecha = fecha;
         nuevaOperacion.tipo = tipo;
-        //nuevaOperacion.billetera = billetera; TODO ver de machearlo con el ID de billetera
-        //nuevaOperacion.user = user; TODO ver de machearlo con el ID de user
-        //nuevaOperacion.categoria = categoria; TODO ver de machearlo con el ID de categoria
-        //nuevaOperacion.categoria = categoria; TODO ver de machearlo con el ID de subCategoria
+        nuevaOperacion.billetera = billetera;
+        nuevaOperacion.user = user;
+        nuevaOperacion.categoria = categoria;
+        nuevaOperacion.categoria = categoria;
         
         const operacionGuardada = await this.operacionRepository.save(nuevaOperacion);
         return this.toDTO(operacionGuardada);
