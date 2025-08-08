@@ -15,7 +15,7 @@ export class CategoriaService {
         if (!categoria) {
             throw new NotFoundError(`Categoría con id ${id} no encontrada`);
         }
-        return this.toDTO(categoria);
+        return categoria;
     }
 
     async create(categoriaData: Partial<Categoria>) {
