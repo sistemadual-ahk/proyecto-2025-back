@@ -50,26 +50,34 @@ function parsearAudios(audio_path: string): Promise<string> {
   });
 }
 
+// Define la interfaz para el tipo de dato 'Operacion'
+interface Operacion {
+    total: number;
+    fecha: Date;
+    categoria: string;
+    descripcion: string;
+    telefono: string;
+}
+
 const operacionSchema = new mongoose.Schema({
-  monto: Number,
+  total: Number,
   fecha: Date,
   categoria: String,
   descripcion: String,
   telefono: String,
 });
-const GastoModel = mongoose.model('Operacion', operacionSchema);
+const OperacionModel = mongoose.model('Operacion', operacionSchema);
 
 async function saveToDatabase(operacion: Operacion): Promise<void> {
-  try {
-    
-    console.log('Guardando en la base de datos:', operacion);
-    const result = await db.collection('Operacion').insertOne(operacion);
-    console.log(`Gasto insertado con éxito con el ID: ${result.insertedId}`);
-
-  } catch (error) {
-    console.error('Error al guardar el gasto en la base de datos:', error);
-    throw error; 
-  }
+    await MongoDBClient.connect();
+     try {
+        const nuevoGasto = new OperacionModel(operacion);
+        await nuevoGasto.save();
+        console.log('✅ Gasto guardado en MongoDB.');
+    } catch (error) {
+        console.error('❌ Error al guardar el gasto en la base de datos:', error);
+        throw error;
+    }
 }
 
 async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio', datos: string) {
