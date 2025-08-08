@@ -1,0 +1,50 @@
+import { Request, Response } from "express";
+import { OperacionService } from "@services/operacion.service";
+import { asyncHandler } from "../middlewares/error.middleware";
+import { BaseController } from "./base.controller";
+import { ValidationError } from "../middlewares/error.middleware";
+
+export class OperacionController extends BaseController {
+    constructor(private operacionService: OperacionService) {
+        super();
+    }
+
+    getAllOperaciones = asyncHandler(async (_req: Request, res: Response) => {
+        const operaciones = await this.operacionService.findAll();
+        return this.sendSuccess(res, 200, operaciones);
+    });
+
+    getOperacionById = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        if (!id) {
+            throw new ValidationError('ID de operacion es requerido');
+        }
+        const operacion = await this.operacionService.findById(id);
+        return this.sendSuccess(res, 200, operacion, 'Operacion encontrada exitosamente');
+    });
+
+    createOperacion = asyncHandler(async (req: Request, res: Response) => {
+        const operacionData = req.body;
+        const nuevaOperacion = await this.operacionService.create(operacionData);
+        return this.sendSuccess(res, 201, nuevaOperacion, 'Operacion creada correctamente');
+    });
+
+    updateOperacion = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const operacionData = req.body;
+        if (!id) {
+            throw new ValidationError('ID de operacion es requerido');
+        }
+        const operacionActualizada = await this.operacionService.update(id, operacionData);
+        return this.sendSuccess(res, 200, operacionActualizada, 'Operacion actualizada correctamente');
+    });
+
+    deleteOperacion = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        if (!id) {
+            throw new ValidationError('ID de operacion es requerido');
+        }
+        const resultado = await this.operacionService.delete(id);
+        return this.sendSuccess(res, 200, resultado, 'Operacion eliminada correctamente');
+    });
+}

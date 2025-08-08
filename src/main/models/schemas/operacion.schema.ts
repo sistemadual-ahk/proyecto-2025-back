@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Operacion } from '@models/entities/operacion';
 import { TipoOperacion } from '@models/entities/tipoOperacion';
+import { ref } from 'process';
 
 const OperacionSchema = new mongoose.Schema({
   descripcion: {
@@ -17,7 +18,7 @@ const OperacionSchema = new mongoose.Schema({
   categoria: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Categoria',
-    required: true
+    required: true,
   },
   billetera: {
     type: mongoose.Schema.Types.ObjectId,
