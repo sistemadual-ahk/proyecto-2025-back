@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
-import { Ingreso } from '../entities/ingreso';
+import { Operacion } from '@models/entities/operacion';
+import { TipoOperacion } from '@models/entities/tipoOperacion';
 
-const ingresoSchema = new mongoose.Schema({
+const OperacionSchema = new mongoose.Schema({
   descripcion: {
     type: String,
     required: true,
@@ -31,12 +32,17 @@ const ingresoSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Usuario',
     required: true
-  }
+  },
+  tipo: {
+      type: String,
+      enum: Object.values(TipoOperacion),
+      required: true
+    }
 }, {
   timestamps: true,
-  collection: 'ingresos'
+  collection: 'Operaciones'
 });
 
-ingresoSchema.loadClass(Ingreso);
+OperacionSchema.loadClass(Operacion);
 
-export const IngresoModel = mongoose.model('Ingreso', ingresoSchema);
+export const OperacionModel = mongoose.model('Operacion', OperacionSchema);
