@@ -1,5 +1,5 @@
 export enum TipoBilletera {
-    DEBITO,
-    CREDITO,
-    METALICO
+  DEBITO = "DEBITO",
+  CREDITO = "CREDITO",
+  METALICO = "METALICO"
 }
