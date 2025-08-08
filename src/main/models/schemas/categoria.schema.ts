@@ -31,7 +31,11 @@ const categoriaSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Usuario',
-    required: true
+    default: null
+  },
+  isDefault: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,

@@ -6,5 +6,6 @@ export class Categoria {
    descripcion: string;
    icono: string;
    color: string;
-   user: Usuario
+   user: Usuario | null;
+   isDefault: boolean
 }

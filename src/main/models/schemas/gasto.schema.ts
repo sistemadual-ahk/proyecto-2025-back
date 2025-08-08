@@ -29,19 +29,23 @@ const gastoSchema = new mongoose.Schema({
         ref: 'Categoria',
         required: true
     },
-    fecha: {
-        type: Date,
-        required: true,
-        default: Date.now
-    },
-    usuarioId: {
-        type: String,
-        required: true,
-        trim: true
-    }
+    billetera: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Billetera',
+    required: true
+  },
+  fecha: {
+    type: Date,
+    required: true
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: true
+  }
 }, {
-    timestamps: true,
-    collection: 'gastos'
+  timestamps: true,
+  collection: 'gastos'
 });
 
 gastoSchema.loadClass(Gasto);
