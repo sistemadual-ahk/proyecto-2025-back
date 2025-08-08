@@ -5,11 +5,11 @@ import { TipoOperacion } from './tipoOperacion';
 
 export class Operacion {
    id: string;
-   descripcion?: string | undefined;
+   descripcion?: string;
    monto: number;
    categoria: Categoria;
    billetera: Billetera;
-   fecha: Date;
-   tipo: TipoOperacion;
+   fecha?: Date;
+   tipo?: TipoOperacion;
    user: Usuario
 }

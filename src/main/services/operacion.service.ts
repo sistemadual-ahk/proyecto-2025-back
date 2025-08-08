@@ -29,8 +29,8 @@ export class OperacionService {
         const nuevaOperacion = new Operacion();
         nuevaOperacion.monto = monto;
         nuevaOperacion.descripcion = descripcion;
-        //nuevaOperacion.fecha = fecha;
-        //nuevaOperacion.tipo = tipo;
+        nuevaOperacion.fecha = fecha;
+        nuevaOperacion.tipo = tipo;
         //nuevaOperacion.billetera = billetera; TODO ver de machearlo con el ID de billetera
         //nuevaOperacion.user = user; TODO ver de machearlo con el ID de user
         //nuevaOperacion.categoria = categoria; TODO ver de machearlo con el ID de categoria

@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { Operacion } from '@models/entities/operacion';
 import { TipoOperacion } from '@models/entities/tipoOperacion';
-import { ref } from 'process';
 
 const OperacionSchema = new mongoose.Schema({
   descripcion: {

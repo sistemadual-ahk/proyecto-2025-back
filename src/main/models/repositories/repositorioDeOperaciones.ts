@@ -18,11 +18,6 @@ export class RepositorioDeOperaciones {
         return operacion as unknown as Operacion | null;
     }
   
-    async findByName(nombre: string): Promise<Operacion | null> {
-        const operacion = await this.model.findOne({ nombre });
-        return operacion as unknown as Operacion | null;
-    }
-  
     async save(operacion: Partial<Operacion>): Promise<Operacion> {
         if (operacion.id) {
             const operacionActualizada = await this.model.findByIdAndUpdate(
