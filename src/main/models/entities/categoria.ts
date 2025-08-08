@@ -1,10 +1,12 @@
 import { Usuario } from "./Usuario";
 
 export class Categoria {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  icono: string;
-  color: string;
-  user: Usuario;
+  constructor(
+    public id: string,
+    public nombre: string,
+    public descripcion: string,
+    public icono: string,
+    public color: string,
+    public user: Usuario
+  ) {}
 }

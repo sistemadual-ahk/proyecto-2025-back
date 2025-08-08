@@ -1,11 +1,13 @@
 import { Categoria } from './categoria';
 
 export class Objetivo {
-  id: string;
-  monto: number;
-  titulo: string;
-  categoria: Categoria;
-  fechaInicio: Date;
-  fechaEsperadaFinalizacion: Date;
-  fechaFin?: Date; 
+  constructor(
+    public id: string,
+    public monto: number,
+    public titulo: string,
+    public categoria: Categoria,
+    public fechaInicio: Date,
+    public fechaEsperadaFinalizacion: Date,
+    public fechaFin?: Date
+  ) {}
 }
