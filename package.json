@@ -15,7 +15,7 @@
     "test:watch": "jest --watch",
     "test": "jest",
     "docker:build": "docker build -t proyecto-2025-back .",
-    "docker:run": "docker run -p 3000:3000 proyecto-2025-back"
+    "docker:run": "docker run -p 3000:3000 proyecto-2025-back",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",

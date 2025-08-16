@@ -1,29 +1,38 @@
-Write-Host "Probando API de proyecto-2025-back..." -ForegroundColor Green
+# Script de prueba para Docker en PowerShell
+Write-Host "🐳 Iniciando pruebas de Docker..." -ForegroundColor Green
 
-# Esperar un momento para que la aplicación esté lista
-Start-Sleep -Seconds 2
+# Detener contenedores existentes
+Write-Host "🛑 Deteniendo contenedores existentes..." -ForegroundColor Yellow
+docker-compose down
 
-Write-Host ""
-Write-Host "Probando endpoint GET /api/saludos:" -ForegroundColor Yellow
-$response1 = Invoke-WebRequest -Uri "http://localhost:3000/api/saludos" -Method GET
-Write-Host $response1.Content
+# Limpiar imágenes
+Write-Host "🧹 Limpiando imágenes..." -ForegroundColor Yellow
+docker system prune -f
 
-Write-Host ""
-Write-Host "Probando endpoint POST /api/saludos/saludar:" -ForegroundColor Yellow
-$response2 = Invoke-WebRequest -Uri "http://localhost:3000/api/saludos/saludar" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"nombre":"Juan"}'
-Write-Host $response2.Content
+# Reconstruir imagen
+Write-Host "🔨 Reconstruyendo imagen..." -ForegroundColor Yellow
+docker-compose build --no-cache
 
-Write-Host ""
-Write-Host "Probando endpoint POST sin nombre (debe dar error):" -ForegroundColor Yellow
+# Iniciar servicios
+Write-Host "🚀 Iniciando servicios..." -ForegroundColor Yellow
+docker-compose up -d
+
+# Esperar un momento para que el servicio se inicie
+Write-Host "⏳ Esperando que el servicio se inicie..." -ForegroundColor Yellow
+Start-Sleep -Seconds 10
+
+# Verificar logs
+Write-Host "📋 Verificando logs..." -ForegroundColor Yellow
+docker-compose logs app
+
+# Probar la API
+Write-Host "🧪 Probando la API..." -ForegroundColor Yellow
 try {
-    $response3 = Invoke-WebRequest -Uri "http://localhost:3000/api/saludos/saludar" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{}'
-    Write-Host $response3.Content
+    $response = Invoke-RestMethod -Uri "http://localhost:3000/api/saludos" -Method GET
+    Write-Host "✅ API responde correctamente" -ForegroundColor Green
+    Write-Host "Respuesta: $($response | ConvertTo-Json)" -ForegroundColor Cyan
 } catch {
-    Write-Host $_.Exception.Response.GetResponseStream()
-    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-    $responseBody = $reader.ReadToEnd()
-    Write-Host $responseBody -ForegroundColor Red
+    Write-Host "❌ API no responde: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-Write-Host ""
-Write-Host "Pruebas completadas!" -ForegroundColor Green 
+Write-Host "✅ Pruebas completadas" -ForegroundColor Green 

@@ -9,6 +9,7 @@ COPY package*.json ./
 COPY tsconfig.json ./
 COPY babel.config.js ./
 COPY jest.config.ts ./
+COPY tsconfig-paths-bootstrap.js ./
 
 # Instalar TODAS las dependencias (incluyendo devDependencies para compilar TypeScript)
 RUN npm ci
@@ -37,6 +38,8 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copiar archivos compilados desde el builder
 COPY --from=builder /app/dist ./dist
+# Copiar el bootstrap de paths
+COPY --from=builder /app/tsconfig-paths-bootstrap.js ./
 
 # Cambiar propietario de los archivos
 RUN chown -R nodejs:nodejs /app
@@ -49,5 +52,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Comando para ejecutar la aplicación
-CMD ["node", "dist/index.js"] 
+# Comando para ejecutar la aplicación usando el bootstrap de paths
+CMD ["node", "-r", "./tsconfig-paths-bootstrap.js", "dist/index.js"] 

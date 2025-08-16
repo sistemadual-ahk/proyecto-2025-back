@@ -6,10 +6,13 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=3000
-      # Usar variables de entorno del archivo .env
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
+      - MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
+      - MONGODB_DB_NAME=main
+      - CORS_ORIGIN=http://localhost:3000
+      - LOG_LEVEL=info
     restart: unless-stopped
     networks:
       - app-network
@@ -24,8 +27,11 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      # Usar variables de entorno del archivo .env
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
+      - MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
+      - MONGODB_DB_NAME=main
+      - CORS_ORIGIN=http://localhost:3000
+      - LOG_LEVEL=info
     volumes:
       - ./src:/app/src
       - ./package.json:/app/package.json

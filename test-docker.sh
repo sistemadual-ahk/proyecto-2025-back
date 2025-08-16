@@ -1,20 +1,33 @@
 #!/bin/bash
 
-echo "🧪 Probando construcción de Docker..."
+echo "🐳 Iniciando pruebas de Docker..."
 
-# Limpiar contenedores y imágenes anteriores
-echo "🧹 Limpiando recursos anteriores..."
+# Detener contenedores existentes
+echo "🛑 Deteniendo contenedores existentes..."
 docker-compose down
+
+# Limpiar imágenes
+echo "🧹 Limpiando imágenes..."
 docker system prune -f
 
-# Construir solo la imagen para probar
-echo "🔨 Construyendo imagen de Docker..."
-docker build -t proyecto-2025-back-test .
+# Reconstruir imagen
+echo "🔨 Reconstruyendo imagen..."
+docker-compose build --no-cache
 
-if [ $? -eq 0 ]; then
-    echo "✅ Construcción exitosa!"
-    echo "🚀 Ahora puedes ejecutar: docker-compose up -d"
-else
-    echo "❌ Error en la construcción. Revisa los logs arriba."
-    exit 1
-fi 
+# Iniciar servicios
+echo "🚀 Iniciando servicios..."
+docker-compose up -d
+
+# Esperar un momento para que el servicio se inicie
+echo "⏳ Esperando que el servicio se inicie..."
+sleep 10
+
+# Verificar logs
+echo "📋 Verificando logs..."
+docker-compose logs app
+
+# Probar la API
+echo "🧪 Probando la API..."
+curl -X GET http://localhost:3000/api/saludos || echo "❌ API no responde"
+
+echo "✅ Pruebas completadas" 
