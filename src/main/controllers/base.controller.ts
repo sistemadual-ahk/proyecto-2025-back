@@ -1,9 +1,22 @@
 import { Response } from "express";
 
-export const enviarRespuesta = (res: Response, statusCode: number, data: any) => {
-  return res.status(statusCode).json({ data });
-};
+export abstract class BaseController {
+  protected sendSuccess(
+    res: Response, 
+    statusCode: number = 200, 
+    data: any = null, 
+    message?: string
+  ): Response {
+    const response: any = {
+      success: true,
+      data,
+      timestamp: new Date().toISOString()
+    };
 
-export const enviarError = (res: Response, statusCode: number, error: string) => {
-  return res.status(statusCode).json({ error });
-};
+    if (message) {
+      response.message = message;
+    }
+
+    return res.status(statusCode).json(response);
+  }
+} 

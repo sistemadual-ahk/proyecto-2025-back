@@ -1,5 +1,23 @@
-// Aqui colocamos el codigo de las funciones que utilicemos en nuestros controladores (se recomienda que se coloquen en un archivo por separado)
-// Aquí se define la lógica de negocio relacionada con los saludos.
-export const obtenerMensajeSaludo = (nombre: string): string => {
-  return `Hola, ${nombre}!`;
-};
+import { ValidationError } from "@middlewares/error.middleware";
+
+export class SaludoService {
+
+  public obtenerMensajeSaludo(nombre: string): string {
+    if (!nombre || nombre.trim().length === 0) {
+      throw new ValidationError("El nombre es requerido");
+    }
+    
+    const nombreFormateado = nombre.trim();
+    return `Hola, ${nombreFormateado}!`;
+  }
+
+  public obtenerSaludoGenerico(): string {
+    return "¡Hola desde la API con TypeScript y Express!";
+  }
+
+  public validarNombre(nombre: string): boolean {
+    return Boolean(nombre && nombre.trim().length > 0);
+  }
+}
+
+export const saludoService = new SaludoService();

@@ -1,0 +1,1 @@
+export { CategoriaModel } from './categoria.schema';
