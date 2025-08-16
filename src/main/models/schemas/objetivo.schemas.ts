@@ -2,10 +2,15 @@ import mongoose from 'mongoose';
 import { Objetivo } from '../entities/objetivo';
 
 const objetivoSchema = new mongoose.Schema({
-  monto: {
-    type: Number,
-    required: true,
-    min: 0.01
+  montoObjetivo: {
+  type: Number,
+  required: true,
+  min: 0.01
+  },
+  montoActual: {
+  type: Number,
+  default: 0,
+  min: 0
   },
   titulo: {
     type: String,

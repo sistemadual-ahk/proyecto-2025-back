@@ -3,28 +3,44 @@ import { Operacion } from '@models/entities/operacion';
 
 export class RepositorioDeOperaciones {
     private model: typeof OperacionModel;
-    
+
     constructor() {
         this.model = OperacionModel;
     }
-  
+
     async findAll(): Promise<Operacion[]> {
-        const operaciones = await this.model.find();
+        const operaciones = await this.model.find()
+            .populate('categoria')
+            .populate('billetera')
+            .populate('user');
         return operaciones as unknown as Operacion[];
     }
-  
+
     async findById(id: string): Promise<Operacion | null> {
-        const operacion = await this.model.findById(id);
+        const operacion = await this.model.findById(id)
+            .populate('categoria')
+            .populate('billetera')
+            .populate('user');
         return operacion as unknown as Operacion | null;
     }
-  
+
+    async findByTipo(tipo: string): Promise<Operacion[]> {
+        const operaciones = await this.model.find({ tipo })
+            .populate('categoria')
+            .populate('billetera')
+            .populate('user');
+        return operaciones as unknown as Operacion[];
+    }
+
     async save(operacion: Partial<Operacion>): Promise<Operacion> {
         if (operacion.id) {
             const operacionActualizada = await this.model.findByIdAndUpdate(
                 operacion.id,
                 operacion,
                 { new: true, runValidators: true }
-            );
+            ).populate('categoria')
+             .populate('billetera')
+             .populate('user');
             return operacionActualizada as unknown as Operacion;
         } else {
             const nuevaOperacion = new this.model(operacion);
@@ -32,7 +48,7 @@ export class RepositorioDeOperaciones {
             return operacionGuardada as unknown as Operacion;
         }
     }
-  
+
     async deleteById(id: string): Promise<boolean> {
         const resultado = await this.model.findByIdAndDelete(id);
         return resultado !== null;

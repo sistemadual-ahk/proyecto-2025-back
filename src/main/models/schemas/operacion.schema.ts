@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Operacion } from '@models/entities/operacion';
 import { TipoOperacion } from '@models/entities/tipoOperacion';
 
-const OperacionSchema = new mongoose.Schema({
+const operacionSchema = new mongoose.Schema({
   descripcion: {
     type: String,
     required: true,
@@ -15,9 +15,14 @@ const OperacionSchema = new mongoose.Schema({
     min: 0.01
   },
   categoria: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Categoria',
-    required: true,
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Categoria',
+  required: true
+  },
+  subcategoria: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Categoria',
+  required: false
   },
   billetera: {
     type: mongoose.Schema.Types.ObjectId,
@@ -40,9 +45,9 @@ const OperacionSchema = new mongoose.Schema({
     }
 }, {
   timestamps: true,
-  collection: 'Operaciones'
+  collection: 'operaciones'
 });
 
-OperacionSchema.loadClass(Operacion);
+operacionSchema.loadClass(Operacion);
 
-export const OperacionModel = mongoose.model('Operacion', OperacionSchema);
+export const OperacionModel = mongoose.model('Operacion', operacionSchema);

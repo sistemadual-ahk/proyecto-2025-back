@@ -10,6 +10,16 @@ export class OperacionService {
         return operaciones.map(o => this.toDTO(o));
     }
 
+    async findAllEgresos() {
+        const operaciones = await this.operacionRepository.findByTipo('Egreso');
+        return operaciones.map(o => this.toDTO(o));
+    }
+
+    async findAllIngresos() {
+        const operaciones = await this.operacionRepository.findByTipo('Ingreso');
+        return operaciones.map(o => this.toDTO(o));
+    }
+
     async findById(id: string) {
         const operacion = await this.operacionRepository.findById(id);
         if (!operacion) {

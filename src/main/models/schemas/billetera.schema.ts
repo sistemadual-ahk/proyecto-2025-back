@@ -24,11 +24,11 @@ const billeteraSchema = new mongoose.Schema({
     required: true,
     default: 0
   },
-  tipo: {
+  /*tipo: {
     type: String,
     enum: Object.values(TipoBilletera),
     required: true
-  },
+  },*/
   color: {
     type: String,
     default: ''

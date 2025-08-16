@@ -1,6 +1,6 @@
 import { Moneda } from './moneda';
 import { TipoBilletera } from './tipoBilletera';
-import { Usuario } from './Usuario';
+import { Usuario } from './usuario';
 
 export class Billetera {
     id: string;
@@ -8,7 +8,7 @@ export class Billetera {
     moneda: Moneda;
     balance: number;
     balanceHistorico: number;
-    tipo: TipoBilletera;
+    //tipo: TipoBilletera; De momento no estimado por complejidad en su uso.
     color: string;
     user: Usuario;
 }

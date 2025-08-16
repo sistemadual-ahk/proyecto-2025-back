@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Usuario } from '../entities/Usuario';
+import { Usuario } from '../entities/usuario';
 
 const usuarioSchema = new mongoose.Schema({
   name: {
@@ -14,6 +14,11 @@ const usuarioSchema = new mongoose.Schema({
     unique: true,
     trim: true,
     lowercase: true
+  },
+  phoneNumber: {
+  type: String,
+  required: true,
+  trim: true
   },
   password: {
     type: String,

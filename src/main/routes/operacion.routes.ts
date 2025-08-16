@@ -6,6 +6,10 @@ export const createOperacionRoutes = (operacionController: OperacionController):
 
     router.get('/', operacionController.getAllOperaciones);
 
+    router.get('/egresos', operacionController.getAllOperacionesEgresos);
+
+    router.get('/ingresos', operacionController.getAllOperacionesIngresos);
+
     router.get('/:id', operacionController.getOperacionById);
 
     router.post('/', operacionController.createOperacion);

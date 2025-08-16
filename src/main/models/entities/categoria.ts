@@ -1,4 +1,4 @@
-import { Usuario } from "./Usuario";
+import { Usuario } from "./usuario";
 
 export class Categoria {
    id: string;

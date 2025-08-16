@@ -1,6 +1,6 @@
 import { Categoria } from './categoria';
 import { Billetera } from './billetera';
-import { Usuario } from './Usuario';
+import { Usuario } from './usuario';
 import { TipoOperacion } from './tipoOperacion';
 
 export class Operacion {
