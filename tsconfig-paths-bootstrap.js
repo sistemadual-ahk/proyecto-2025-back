@@ -19,3 +19,6 @@ tsConfigPaths.register({
   baseUrl,
   paths
 });
+
+console.log('✅ tsconfig-paths registrado con baseUrl:', baseUrl);
+console.log('📁 Paths configurados:', Object.keys(paths));

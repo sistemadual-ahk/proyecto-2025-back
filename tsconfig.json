@@ -26,6 +26,7 @@
     "noUncheckedIndexedAccess": true,
     "baseUrl": "./src",
     "paths": {
+
       "@config/*": ["config/*"],
       "@controllers/*": ["main/controllers/*"],
       "@services/*": ["main/services/*"],
