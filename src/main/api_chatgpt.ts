@@ -1,10 +1,11 @@
 import OpenAI from 'openai';
-import fs from 'fs';
 import * as path from 'path';
+import * as fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg';
 import { MongoDBClient } from '../config/db'; 
 import mongoose from 'mongoose';
 
+const projectRoot = path.resolve(__dirname, '..', '..');
 const client = new OpenAI({
   apiKey: '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',
 });
@@ -59,6 +60,7 @@ interface Operacion {
     telefono: string;
 }
 
+
 const operacionSchema = new mongoose.Schema({
   total: Number,
   fecha: Date,
@@ -66,7 +68,8 @@ const operacionSchema = new mongoose.Schema({
   descripcion: String,
   telefono: String,
 });
-const OperacionModel = mongoose.model('Operacion', operacionSchema);
+
+const OperacionModel = mongoose.model('Operacion', operacionSchema, 'operaciones');
 
 async function saveToDatabase(operacion: Operacion): Promise<void> {
     await MongoDBClient.connect();
@@ -80,7 +83,7 @@ async function saveToDatabase(operacion: Operacion): Promise<void> {
     }
 }
 
-async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio', datos: string) {
+export async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio', datos: string) {
   let resultadoAPI;
 
   const promptBase = `
@@ -116,7 +119,8 @@ async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio', datos:
     }else if (tipoEntrada === 'audio') {
     try {
         console.log('Procesando audio de gasto...');
-        const mp3_path = await parsearAudios(datos);
+        const audioPath = path.join(projectRoot, 'src', datos);
+        const mp3_path = await parsearAudios(audioPath);
 
         const transcripcion = await client.audio.transcriptions.create({
             model: 'whisper-1',
@@ -171,4 +175,4 @@ async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio', datos:
 
 //procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
 //procesarEntrada('imagen', 'images/ticket.webp');
-procesarEntrada('audio', 'audio/PTT-20250801-WA0022.opus');
+//procesarEntrada('audio', 'audio/PTT-20250801-WA0022.opus');

@@ -1,5 +1,6 @@
 import { Categoria } from "./categoria";
 import { Moneda } from "./moneda";
+import { Billetera } from "./billetera";
 
 export class Ingreso {
     id: string;
