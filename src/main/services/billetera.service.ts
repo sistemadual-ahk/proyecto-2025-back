@@ -20,7 +20,7 @@ export class BilleteraService {
         const { nombre, moneda, user } = billeteraData;
         if (!nombre || !moneda || !user) throw new ValidationError('Nombre, moneda y usuario son requeridos');
 
-        const existente = await this.billeteraRepository.findByNameAndUser(nombre.trim(), user);
+        const existente = await this.billeteraRepository.findByNameAndUser(nombre.trim(), user.name);
         if (existente) throw new ConflictError(`Ya existe una billetera con el nombre ${nombre} para este usuario`);
 
         const nuevaBilletera = new Billetera();

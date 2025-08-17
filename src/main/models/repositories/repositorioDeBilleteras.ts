@@ -19,6 +19,12 @@ export class RepositorioDeBilleteras {
         return billetera as unknown as Billetera | null;
     }
 
+    async findByNameAndUser(nombre: string, userId: string): Promise<Billetera | null> {
+    const billetera = await this.model.findOne({ nombre, user: userId }).populate('user');
+    return billetera as unknown as Billetera | null;
+}
+
+
     async save(billetera: Partial<Billetera>): Promise<Billetera> {
         if (billetera.id) {
             const billeteraActualizada = await this.model.findByIdAndUpdate(

@@ -30,12 +30,14 @@ export class OperacionService {
 
     async create(operacionData: Partial<Operacion>) {
         const { descripcion, monto, fecha, tipo, user, billetera, categoria } = operacionData;
-        
+        if (!monto || !tipo || !user || !billetera || !categoria) {
+                throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
+            }
 
-        if (monto !== 0) {
+        if (monto === 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
-    //verificadorzod 
+
         const nuevaOperacion = new Operacion();
         nuevaOperacion.monto = monto;
         nuevaOperacion.descripcion = descripcion;

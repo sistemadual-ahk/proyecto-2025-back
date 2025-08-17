@@ -9,5 +9,5 @@ export class Objetivo {
     categoria: Categoria;
     fechaInicio: Date;
     fechaEsperadaFinalizacion: Date;
-    fechaFin: Date;
+    fechaFin?: Date | null;
 }

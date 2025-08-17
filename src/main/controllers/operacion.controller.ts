@@ -15,12 +15,12 @@ export class OperacionController extends BaseController {
     });
 
     getAllOperacionesIngresos = asyncHandler(async (_req: Request, res: Response) => {
-    const operaciones = await this.operacionService.findByTipo('Ingreso');
+    const operaciones = await this.operacionService.findAllIngresos();
     return this.sendSuccess(res, 200, operaciones);
     });
 
     getAllOperacionesEgresos = asyncHandler(async (_req: Request, res: Response) => {
-        const operaciones = await this.operacionService.findByTipo('Egreso');
+        const operaciones = await this.operacionService.findAllEgresos();
         return this.sendSuccess(res, 200, operaciones);
     });
 

@@ -4,16 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const saludo_routes_1 = __importDefault(require("./routes/saludo.routes"));
+const routes_1 = require("@routes/routes");
+const error_middleware_1 = require("@middlewares/error.middleware");
 const app = (0, express_1.default)();
 app.set("trust proxy", true);
 app.use(express_1.default.json());
-app.use((req, res, next) => {
+// Middleware de log
+app.use((req, _res, next) => {
     console.log(`Método: ${req.method} - URL: ${req.url}`);
     next();
 });
-const routes = [
-    { path: "/api/saludos", handler: saludo_routes_1.default },
-];
-routes.forEach(route => app.use(route.path, route.handler));
+routes_1.routes.forEach(route => app.use(route.path, route.handler));
+app.use(error_middleware_1.errorHandler);
 exports.default = app;
+//# sourceMappingURL=app.js.map
