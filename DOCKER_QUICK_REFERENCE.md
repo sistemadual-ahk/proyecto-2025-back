@@ -8,6 +8,7 @@
 - [ ] `tsconfig.json` optimizado para Docker
 - [ ] Variables de entorno en `.env.example`
 - [ ] `.gitignore` actualizado
+- [ ] `tsconfig-paths-bootstrap.js` configurado
 
 ### ✅ Archivos Docker
 - [ ] `Dockerfile` con multi-stage build
@@ -15,6 +16,7 @@
 - [ ] `docker-compose.yml` configurado
 - [ ] `.dockerignore` completo
 - [ ] Scripts de despliegue
+- [ ] Scripts de testing (`test-api.ps1`, `test-docker.sh`)
 
 ### ✅ Seguridad
 - [ ] Usuario no-root en Dockerfile
@@ -36,8 +38,11 @@
 
 ### Desarrollo Local
 ```bash
-# Construir y ejecutar
+# Construir y ejecutar (con logs en tiempo real)
 docker-compose up --build
+
+# Solo ejecutar (si no hay cambios en dependencias)
+docker-compose up
 
 # Solo desarrollo
 docker-compose --profile dev up --build
@@ -47,6 +52,24 @@ docker-compose logs -f app
 
 # Parar servicios
 docker-compose down
+```
+
+### Testing Automatizado
+```bash
+# Testing completo en Windows (PowerShell)
+.\test-api.ps1
+
+# Testing completo en Linux/Mac
+chmod +x test-docker.sh
+./test-docker.sh
+
+# Testing manual paso a paso
+docker-compose down
+docker system prune -f
+docker-compose build --no-cache
+docker-compose up -d
+sleep 10
+curl http://localhost:3000/api/saludos
 ```
 
 ### Producción
@@ -77,6 +100,9 @@ docker stats
 
 # Ver logs específicos
 docker-compose logs app --tail=100
+
+# Ver logs con timestamps
+docker-compose logs -f --timestamps app
 ```
 
 ### Mantenimiento
@@ -92,15 +118,23 @@ docker system df
 
 # Ver imágenes
 docker images
+
+# Limpiar contenedores detenidos
+docker container prune
 ```
 
-### Testing
+### Testing de API
 ```bash
 # Probar API (PowerShell)
-(Invoke-WebRequest -Uri "http://localhost:3000/api/saludos").Content
+Invoke-RestMethod -Uri "http://localhost:3000/api/saludos" -Method GET
 
 # Probar con curl (Linux/Mac)
 curl http://localhost:3000/api/saludos
+
+# Probar endpoint POST
+curl -X POST http://localhost:3000/api/saludos/saludar \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Juan"}'
 
 # Health check
 curl -f http://localhost:3000/api/health
@@ -115,12 +149,17 @@ curl -f http://localhost:3000/api/health
 # Desarrollo
 NODE_ENV=development
 PORT=3000
-MONGODB_URI=mongodb://localhost:27017/dev
+MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
+MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
+MONGODB_DB_NAME=main
+CORS_ORIGIN=http://localhost:3000
+LOG_LEVEL=info
 
 # Producción
 NODE_ENV=production
-PORT=3000
+PORT=10000
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/db
+CORS_ORIGIN=https://tu-app.onrender.com
 ```
 
 ### Docker Compose Básico
@@ -132,14 +171,22 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGODB_URI=mongodb+srv://...
     restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 ```
 
 ### Health Check
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:3000/api/saludos', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 ```
 
 ---
@@ -153,10 +200,20 @@ ports:
   - "3001:3000"
 ```
 
-### Problema: Error de módulos
+### Problema: Error de módulos (@routes/routes)
 ```bash
+# Verificar que tsconfig-paths-bootstrap.js esté copiado
 # Reconstruir sin cache
 docker-compose build --no-cache
+```
+
+### Problema: Error de compilación TypeScript
+```bash
+# Compilar localmente para ver errores
+npm run build
+
+# Verificar imports y tipos
+npm run type-check
 ```
 
 ### Problema: Permisos
@@ -173,6 +230,21 @@ deploy:
   resources:
     limits:
       memory: 1G
+```
+
+### Problema: Contenedor no inicia
+```bash
+# Ver logs detallados
+docker-compose logs app
+
+# Verificar variables de entorno
+docker-compose config
+
+# Reconstruir completamente
+docker-compose down
+docker system prune -f
+docker-compose build --no-cache
+docker-compose up
 ```
 
 ---
@@ -200,9 +272,22 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
   });
 });
+```
+
+### Verificación de Estado
+```bash
+# Verificar que la aplicación responde
+curl -f http://localhost:3000/api/saludos
+
+# Verificar logs de inicio
+docker-compose logs app | grep "✅"
+
+# Verificar conexión a MongoDB
+docker-compose logs app | grep "MongoDB"
 ```
 
 ---
@@ -296,7 +381,36 @@ docker-compose down
 docker-compose build --no-cache
 docker-compose up -d
 sleep 30
-curl -f http://localhost:3000/api/health
+curl -f http://localhost:3000/api/saludos
+```
+
+### Script de Testing Automatizado
+```bash
+#!/bin/bash
+echo "🐳 Iniciando pruebas de Docker..."
+
+# Detener contenedores existentes
+docker-compose down
+
+# Limpiar imágenes
+docker system prune -f
+
+# Reconstruir imagen
+docker-compose build --no-cache
+
+# Iniciar servicios
+docker-compose up -d
+
+# Esperar que el servicio se inicie
+sleep 10
+
+# Verificar logs
+docker-compose logs app
+
+# Probar la API
+curl -X GET http://localhost:3000/api/saludos
+
+echo "✅ Pruebas completadas"
 ```
 
 ---
@@ -307,6 +421,7 @@ curl -f http://localhost:3000/api/health
 - [Docker Docs](https://docs.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
 - [Node.js Docker](https://nodejs.org/en/docs/guides/nodejs-docker-webapp/)
+- [tsconfig-paths](https://github.com/dividab/tsconfig-paths)
 
 ### Herramientas
 - [Docker Desktop](https://www.docker.com/products/docker-desktop)
