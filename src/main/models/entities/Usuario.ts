@@ -3,5 +3,5 @@ export class Usuario {
     name: string;
     phoneNumber: number;
     mail: string;
-    password: string;
+    password: string | null;
 }

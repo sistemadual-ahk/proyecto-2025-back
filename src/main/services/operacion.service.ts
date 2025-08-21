@@ -91,7 +91,19 @@ export class OperacionService {
     private toDTO(operacion: Operacion) {
         return {
             id: operacion.id || (operacion as any)._id,
-            descripcion: operacion.descripcion
+            descripcion: operacion.descripcion,
+            monto: operacion.monto,
+            categoria: operacion.categoria,
+            billetera: operacion.billetera,
+            fecha: operacion.fecha,
+            tipo: operacion.tipo,
+            user: operacion.user
+                ? {
+                    id: (operacion.user as any)._id,
+                    nombre: (operacion.user as any).nombre,
+                    email: (operacion.user as any).email
+                }
+                : null
         };
     }
 } 

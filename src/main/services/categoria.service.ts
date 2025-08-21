@@ -79,7 +79,11 @@ export class CategoriaService {
         return {
             id: categoria.id || (categoria as any)._id,
             nombre: categoria.nombre,
-            descripcion: categoria.descripcion
+            descripcion: categoria.descripcion,
+            icono: categoria.icono,
+            color: categoria.color,
+            isDefault: categoria.isDefault,
+            user: categoria.user?.id
         };
     }
 } 
