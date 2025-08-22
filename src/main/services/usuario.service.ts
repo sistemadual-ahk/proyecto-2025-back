@@ -1,4 +1,4 @@
-import { Usuario } from "@models/entities/Usuario";
+import { Usuario } from "@models/entities/usuario";
 import { RepositorioDeUsuarios } from "@models/repositories/repositorioDeUsuarios";
 import { ValidationError, NotFoundError, ConflictError } from "../middlewares/error.middleware";
 
