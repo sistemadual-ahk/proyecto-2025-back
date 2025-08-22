@@ -2,8 +2,12 @@ import OpenAI from 'openai';
 import * as path from 'path';
 import * as fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg';
-import { MongoDBClient } from '../config/db'; 
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+dotenv.config();
+
+
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 
 const projectRoot = path.resolve(__dirname, '..', '..');
 const client = new OpenAI({
@@ -26,9 +30,8 @@ function extraerJSONDeRespuesta(texto: string): string | null {
 
 function parsearAudios(audio_path: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+    
     ffmpeg.setFfmpegPath(ffmpegPath);
-
     if (!fs.existsSync(audio_path)) {
       reject(`Error: El archivo de entrada "${audio_path}" no se encuentra.`);
       return;
@@ -72,7 +75,6 @@ const operacionSchema = new mongoose.Schema({
 const OperacionModel = mongoose.model('Operacion', operacionSchema, 'operaciones');
 
 async function saveToDatabase(operacion: Operacion): Promise<void> {
-    await MongoDBClient.connect();
      try {
         const nuevoGasto = new OperacionModel(operacion);
         await nuevoGasto.save();

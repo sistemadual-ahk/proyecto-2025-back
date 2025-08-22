@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
-import * as dotenv from "dotenv";
 
-dotenv.config();
 
 export class MongoDBClient {
     static async connect(): Promise<void> {
@@ -16,10 +14,11 @@ export class MongoDBClient {
             }
             
             const connectionString = MONGO_DB_NAME 
-                ? `${MONGO_URI}/${MONGO_DB_NAME}?${MONGO_DB_PARAMS}`
+                ? `${MONGO_URI}${MONGO_DB_NAME}?${MONGO_DB_PARAMS}`
                 : MONGO_URI;
-            
+
             const conn = await mongoose.connect(connectionString);
+            console.log(connectionString)
             console.log(`✅ MongoDB conectado: ${conn.connection.host}`);
             console.log(`📊 Base de datos: ${conn.connection.name}`);
             console.log(`🔗 URI de conexión: ${connectionString}`);

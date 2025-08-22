@@ -36,12 +36,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.procesarEntrada = procesarEntrada;
 var openai_1 = require("openai");
 var path = require("path");
 var fs = require("fs");
 var fluent_ffmpeg_1 = require("fluent-ffmpeg");
 var db_1 = require("../config/db");
 var mongoose_1 = require("mongoose");
+var projectRoot = path.resolve(__dirname, '..', '..');
 var client = new openai_1.default({
     apiKey: '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',
 });
@@ -88,7 +90,7 @@ var operacionSchema = new mongoose_1.default.Schema({
     descripcion: String,
     telefono: String,
 });
-var OperacionModel = mongoose_1.default.model('Operacion', operacionSchema);
+var OperacionModel = mongoose_1.default.model('Operacion', operacionSchema, 'operaciones');
 function saveToDatabase(operacion) {
     return __awaiter(this, void 0, void 0, function () {
         var nuevoGasto, error_1;
@@ -117,7 +119,7 @@ function saveToDatabase(operacion) {
 }
 function procesarEntrada(tipoEntrada, datos) {
     return __awaiter(this, void 0, void 0, function () {
-        var resultadoAPI, promptBase, imagenBase64, mp3_path, transcripcion, error_2, respuestaDeOpenAI, jsonLimpio, datosDeGasto, e_1, error_3;
+        var resultadoAPI, promptBase, imagenBase64, audioPath, mp3_path, transcripcion, error_2, respuestaDeOpenAI, jsonLimpio, datosDeGasto, e_1, error_3;
         var _a, _b, _c;
         return __generator(this, function (_d) {
             switch (_d.label) {
@@ -161,7 +163,8 @@ function procesarEntrada(tipoEntrada, datos) {
                 case 6:
                     _d.trys.push([6, 10, , 11]);
                     console.log('Procesando audio de gasto...');
-                    return [4 /*yield*/, parsearAudios(datos)];
+                    audioPath = path.join(projectRoot, 'src', datos);
+                    return [4 /*yield*/, parsearAudios(audioPath)];
                 case 7:
                     mp3_path = _d.sent();
                     return [4 /*yield*/, client.audio.transcriptions.create({
@@ -224,4 +227,4 @@ function procesarEntrada(tipoEntrada, datos) {
 }
 //procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
 //procesarEntrada('imagen', 'images/ticket.webp');
-procesarEntrada('audio', 'audio/PTT-20250801-WA0022.opus');
+//procesarEntrada('audio', 'audio/PTT-20250801-WA0022.opus');

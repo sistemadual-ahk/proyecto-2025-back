@@ -50,7 +50,6 @@ var MongoDBClient = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         _a.trys.push([0, 2, , 3]);
-                        console.log(process.env['MONGODB_URI']);
                         MONGO_URI = process.env['MONGODB_URI'];
                         MONGO_DB_NAME = process.env['MONGODB_DB_NAME'];
                         MONGO_DB_PARAMS = process.env['MONGODB_PARAMS'];

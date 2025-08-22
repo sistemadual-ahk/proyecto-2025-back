@@ -8,7 +8,8 @@ async function startApp() {
     
     console.log("Conexión a la base de datos establecida. Ejecutando test de la API...");
     // Llama a la función que inicia el procesamiento
-    await procesarEntrada('audio', 'PTT-20250801-WA0022.opus');
+    //await procesarEntrada('audio', 'PTT-20250801-WA0022.opus');
+    procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
     console.log("Test de la API finalizado.");
 }
 
