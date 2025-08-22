@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node -r ./tsconfig-paths-bootstrap.js dist/index.js",
     "start:prod": "node -r ./tsconfig-paths-bootstrap.js dist/index.js",
-    "dev": "ts-node -r tsconfig-paths/register src/index.ts",
+    "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
     "build": "tsc",
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
