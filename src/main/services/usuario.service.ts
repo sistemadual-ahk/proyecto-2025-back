@@ -37,7 +37,7 @@ export class UsuarioService {
         const usuarioExistente = await this.usuarioRepository.findById(id);
         if (!usuarioExistente) throw new NotFoundError(`Usuario con id ${id} no encontrado`);
 
-        const { name, mail, password } = usuarioData;
+        const { name, mail, password, phoneNumber } = usuarioData;
 
         if (mail && mail !== usuarioExistente.mail) {
             const existente = await this.usuarioRepository.findByEmail(mail.trim().toLowerCase());
@@ -48,6 +48,7 @@ export class UsuarioService {
             ...usuarioExistente,
             name: name?.trim() || usuarioExistente.name,
             mail: mail?.trim().toLowerCase() || usuarioExistente.mail,
+            phoneNumber: phoneNumber || usuarioExistente.phoneNumber,
             password: password || usuarioExistente.password
         };
 

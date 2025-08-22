@@ -10,6 +10,14 @@ export class CategoriaService {
         return categorias.map(c => this.toDTO(c));
     }
 
+    async findAllForUser(userId?: string) {
+        if (!userId) {
+            throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
+        }
+        const categorias = await this.categoriaRepository.findAllForUser(userId);
+        return categorias.map(c => this.toDTO(c));
+    }
+
     async findById(id: string) {
         const categoria = await this.categoriaRepository.findById(id);
         if (!categoria) {
@@ -18,8 +26,13 @@ export class CategoriaService {
         return categoria;
     }
 
+    async findAllByUser(userId: string) {
+        const categorias = await this.categoriaRepository.findAllByUser(userId);
+        return categorias.map(c => this.toDTO(c));
+    }
+
     async create(categoriaData: Partial<Categoria>) {
-        const { nombre, descripcion } = categoriaData;
+        const { nombre, descripcion, icono, color, user } = categoriaData;
         
         if (!nombre || nombre.trim().length === 0) {
             throw new ValidationError('El nombre de la categoría es requerido');
@@ -33,6 +46,15 @@ export class CategoriaService {
         const nuevaCategoria = new Categoria();
         nuevaCategoria.nombre = nombre.trim();
         nuevaCategoria.descripcion = descripcion?.trim() || '';
+        nuevaCategoria.icono = icono || "";
+        nuevaCategoria.color = color || "";
+        if (user){
+            nuevaCategoria.isDefault = false;
+            nuevaCategoria.user = user;
+        }
+        else{
+            nuevaCategoria.isDefault = true;
+        }
         
         const categoriaGuardada = await this.categoriaRepository.save(nuevaCategoria);
         return this.toDTO(categoriaGuardada);
@@ -76,6 +98,7 @@ export class CategoriaService {
     }
 
     private toDTO(categoria: Categoria) {
+        const user = (categoria as any).user;
         return {
             id: categoria.id || (categoria as any)._id,
             nombre: categoria.nombre,
@@ -83,7 +106,12 @@ export class CategoriaService {
             icono: categoria.icono,
             color: categoria.color,
             isDefault: categoria.isDefault,
-            user: categoria.user?.id
+            user: user 
+              ? {
+                id: user._id?.toString?.() || user.id,
+                name: user.name
+            }
+            : null
         };
     }
 } 

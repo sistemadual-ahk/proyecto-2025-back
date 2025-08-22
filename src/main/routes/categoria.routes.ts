@@ -6,7 +6,11 @@ export const createCategoriaRoutes = (categoriaController: CategoriaController):
 
     router.get('/', categoriaController.getAllCategorias);
 
+    router.get('/for/:id', categoriaController.getAllCategoriasForUser);
+
     router.get('/:id', categoriaController.getCategoriaById);
+
+    router.get('/user/:id', categoriaController.getCategoriaByUser);
 
     router.post('/', categoriaController.createCategoria);
 
