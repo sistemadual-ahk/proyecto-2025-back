@@ -19,7 +19,7 @@ export const usuarioRepo = new RepositorioDeUsuarios();
 
 
 // Servicios
-export const categoriaService = new CategoriaService(categoriaRepo);
+export const categoriaService = new CategoriaService(categoriaRepo, usuarioRepo);
 export const operacionService = new OperacionService(operacionRepo);
 export const billeteraService = new BilleteraService(billeteraRepo);
 export const objetivoService = new ObjetivoService(objetivoRepo);

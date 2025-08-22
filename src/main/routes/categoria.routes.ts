@@ -4,9 +4,9 @@ import { CategoriaController } from "../controllers/categoria.controller";
 export const createCategoriaRoutes = (categoriaController: CategoriaController): Router => {
     const router = Router();
 
-    router.get('/', categoriaController.getAllCategorias);
+    router.get('/all', categoriaController.getAllCategorias);
 
-    router.get('/for/:id', categoriaController.getAllCategoriasForUser);
+    router.get('/', categoriaController.getAllCategoriasForUser);
 
     router.get('/:id', categoriaController.getCategoriaById);
 

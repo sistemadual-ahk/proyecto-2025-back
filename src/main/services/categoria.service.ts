@@ -1,9 +1,10 @@
 import { Categoria } from "../models/entities/categoria";
-import { RepositorioDeCategorias } from "../models/repositories/repositorioDeCategorias";
+import { RepositorioDeCategorias, } from "../models/repositories/repositorioDeCategorias";
 import { ValidationError, ConflictError, NotFoundError } from "../middlewares/error.middleware";
+import { RepositorioDeUsuarios } from "@models/repositories";
 
 export class CategoriaService {
-    constructor(private categoriaRepository: RepositorioDeCategorias) {}
+    constructor(private categoriaRepository: RepositorioDeCategorias, private userRepository: RepositorioDeUsuarios) {}
 
     async findAll() {
         const categorias = await this.categoriaRepository.findAll();
@@ -31,9 +32,10 @@ export class CategoriaService {
         return categorias.map(c => this.toDTO(c));
     }
 
-    async create(categoriaData: Partial<Categoria>) {
-        const { nombre, descripcion, icono, color, user } = categoriaData;
-        
+    async create(categoriaData: Partial<Categoria>, userID: string) {
+        const { nombre, descripcion, icono, color } = categoriaData;
+        this.userRepository.findById(userID);
+
         if (!nombre || nombre.trim().length === 0) {
             throw new ValidationError('El nombre de la categoría es requerido');
         }
@@ -48,13 +50,8 @@ export class CategoriaService {
         nuevaCategoria.descripcion = descripcion?.trim() || '';
         nuevaCategoria.icono = icono || "";
         nuevaCategoria.color = color || "";
-        if (user){
-            nuevaCategoria.isDefault = false;
-            nuevaCategoria.user = user;
-        }
-        else{
-            nuevaCategoria.isDefault = true;
-        }
+        nuevaCategoria.isDefault = false;
+        nuevaCategoria.user = userID
         
         const categoriaGuardada = await this.categoriaRepository.save(nuevaCategoria);
         return this.toDTO(categoriaGuardada);
@@ -66,7 +63,7 @@ export class CategoriaService {
             throw new NotFoundError(`Categoría con id ${id} no encontrada`);
         }
 
-        const { nombre, descripcion } = categoriaData;
+        const { nombre, descripcion, icono, color} = categoriaData;
         
         if (nombre && nombre.trim().length === 0) {
             throw new ValidationError('El nombre de la categoría no puede estar vacío');
@@ -82,7 +79,9 @@ export class CategoriaService {
         const categoriaActualizada = {
             id: id,
             nombre: nombre?.trim() || categoriaExistente.nombre,
-            descripcion: descripcion?.trim() || categoriaExistente.descripcion
+            descripcion: descripcion?.trim() || categoriaExistente.descripcion,
+            icono: icono || categoriaExistente.icono,
+            color: color || categoriaExistente.color
         };
 
         const resultado = await this.categoriaRepository.save(categoriaActualizada);
