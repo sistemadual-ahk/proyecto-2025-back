@@ -42,7 +42,7 @@ export class BilleteraService {
         const { nombre, moneda, balance, balanceHistorico, color } = billeteraData;
 
         const actualizado = {
-            ...billeteraExistente,
+            id: id,
             nombre: nombre?.trim() || billeteraExistente.nombre,
             moneda: moneda || billeteraExistente.moneda,
             color: color || billeteraExistente.color,

@@ -45,7 +45,7 @@ export class UsuarioService {
         }
 
         const actualizado = {
-            ...usuarioExistente,
+            id: id,
             name: name?.trim() || usuarioExistente.name,
             mail: mail?.trim().toLowerCase() || usuarioExistente.mail,
             phoneNumber: phoneNumber || usuarioExistente.phoneNumber,

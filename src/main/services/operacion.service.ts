@@ -65,7 +65,7 @@ export class OperacionService {
         }
 
         const operacionActualizada = {
-            ...operacionExistente,
+            id: id,
             monto: monto || operacionExistente.monto,
             descripcion: descripcion || operacionExistente.descripcion,
             fecha: fecha || operacionExistente.fecha,

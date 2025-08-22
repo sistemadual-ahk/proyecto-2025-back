@@ -40,7 +40,7 @@ export class ObjetivoService {
         if (!objetivoExistente) throw new NotFoundError(`Objetivo con id ${id} no encontrado`);
 
         const actualizado = {
-            ...objetivoExistente,
+            id: id,
             titulo: objetivoData.titulo || objetivoExistente.titulo,
             montoObjetivo: objetivoData.montoObjetivo || objetivoExistente.montoObjetivo,
             categoria: objetivoData.categoria || objetivoExistente.categoria,
