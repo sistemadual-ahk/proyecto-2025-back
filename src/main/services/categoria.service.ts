@@ -80,7 +80,7 @@ export class CategoriaService {
         }
 
         const categoriaActualizada = {
-            ...categoriaExistente,
+            id: id,
             nombre: nombre?.trim() || categoriaExistente.nombre,
             descripcion: descripcion?.trim() || categoriaExistente.descripcion
         };
