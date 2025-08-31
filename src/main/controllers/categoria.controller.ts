@@ -9,7 +9,7 @@ export class CategoriaController extends BaseController {
         super();
     }
 
-    getAllCategorias = asyncHandler(async (_req: Request, res: Response) => {
+    getAllCategorias = asyncHandler(async (req: Request, res: Response) => {
         const categorias = await this.categoriaService.findAll();
         return this.sendSuccess(res, 200, categorias);
     });
@@ -23,9 +23,25 @@ export class CategoriaController extends BaseController {
         return this.sendSuccess(res, 200, categoria, 'Categoría encontrada exitosamente');
     });
 
+    getAllCategoriasForUser = asyncHandler(async (req: Request, res: Response) => {
+        const userID = "68a88b3ed364dbde4291d16a";
+        const categorias = await this.categoriaService.findAllForUser(userID);
+        return this.sendSuccess(res, 200, categorias);
+    });
+
+    getCategoriaByUser = asyncHandler(async (req: Request, res: Response) => {
+      const { id } = req.params;
+      if (!id) {
+            throw new ValidationError('ID de usuario es requerido');
+        }
+      const categorias = await this.categoriaService.findAllByUser(id);
+      return this.sendSuccess(res, 200, categorias);
+    });
+
     createCategoria = asyncHandler(async (req: Request, res: Response) => {
+        const userID = "68a684e9ce1afe11470ccc25";
         const categoriaData = req.body;
-        const nuevaCategoria = await this.categoriaService.create(categoriaData);
+        const nuevaCategoria = await this.categoriaService.create(categoriaData, userID);
         return this.sendSuccess(res, 201, nuevaCategoria, 'Categoría creada correctamente');
     });
 

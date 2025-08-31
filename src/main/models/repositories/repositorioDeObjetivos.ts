@@ -1,4 +1,4 @@
-import { ObjetivoModel } from "@models/schemas/objetivo.schemas";
+import { ObjetivoModel } from "@models/schemas/objetivo.schema";
 import { Objetivo } from '../entities/objetivo';
 
 export class RepositorioDeObjetivos {

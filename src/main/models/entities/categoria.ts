@@ -7,5 +7,5 @@ export class Categoria {
    icono: string;
    color: string;
    user: Usuario | null;
-   isDefault: boolean
+   isDefault: boolean //Puede ser que la filetiemos
 }

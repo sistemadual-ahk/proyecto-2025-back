@@ -1,4 +1,4 @@
-import { Usuario } from "../models/entities/usuario";
+import { Usuario } from "@models/entities/usuario";
 import { RepositorioDeUsuarios } from "@models/repositories/repositorioDeUsuarios";
 import { ValidationError, NotFoundError, ConflictError } from "../middlewares/error.middleware";
 
@@ -17,8 +17,8 @@ export class UsuarioService {
     }
 
     async create(usuarioData: Partial<Usuario>) {
-        const { name, mail, password } = usuarioData;
-        if (!name || !mail || !password) throw new ValidationError('Todos los campos son requeridos');
+        const { name, mail, password, phoneNumber } = usuarioData;
+        if (!name || !mail || !password || !phoneNumber) throw new ValidationError('Todos los campos son requeridos');
 
         const existente = await this.usuarioRepository.findByEmail(mail.trim().toLowerCase());
         if (existente) throw new ConflictError(`Ya existe un usuario con el mail ${mail}`);
@@ -26,6 +26,7 @@ export class UsuarioService {
         const nuevoUsuario = new Usuario();
         nuevoUsuario.name = name.trim();
         nuevoUsuario.mail = mail.trim().toLowerCase();
+        nuevoUsuario.phoneNumber = phoneNumber;
         nuevoUsuario.password = password; // considerar hash después
 
         const guardado = await this.usuarioRepository.save(nuevoUsuario);
@@ -36,7 +37,7 @@ export class UsuarioService {
         const usuarioExistente = await this.usuarioRepository.findById(id);
         if (!usuarioExistente) throw new NotFoundError(`Usuario con id ${id} no encontrado`);
 
-        const { name, mail, password } = usuarioData;
+        const { name, mail, password, phoneNumber } = usuarioData;
 
         if (mail && mail !== usuarioExistente.mail) {
             const existente = await this.usuarioRepository.findByEmail(mail.trim().toLowerCase());
@@ -44,9 +45,10 @@ export class UsuarioService {
         }
 
         const actualizado = {
-            ...usuarioExistente,
+            id: id,
             name: name?.trim() || usuarioExistente.name,
             mail: mail?.trim().toLowerCase() || usuarioExistente.mail,
+            phoneNumber: phoneNumber || usuarioExistente.phoneNumber,
             password: password || usuarioExistente.password
         };
 
@@ -64,7 +66,9 @@ export class UsuarioService {
         return {
             id: usuario.id || (usuario as any)._id,
             name: usuario.name,
-            mail: usuario.mail
+            mail: usuario.mail,
+            phoneNumber: usuario.phoneNumber,
+            password: usuario.password,
         };
     }
 }

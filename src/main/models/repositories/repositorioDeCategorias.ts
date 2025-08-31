@@ -1,5 +1,6 @@
 import { CategoriaModel } from '../schemas/categoria.schema';
 import { Categoria } from '../entities/categoria';
+import { Types } from 'mongoose';
 
 export class RepositorioDeCategorias {
     private model: typeof CategoriaModel;
@@ -9,18 +10,32 @@ export class RepositorioDeCategorias {
     }
   
     async findAll(): Promise<Categoria[]> {
-        const categorias = await this.model.find();
+        const categorias = await this.model.find().populate('user', 'name _id');
         return categorias as unknown as Categoria[];
     }
   
     async findById(id: string): Promise<Categoria | null> {
-        const categoria = await this.model.findById(id);
+        const categoria = await this.model.findById(id).populate('user', 'name _id');
         return categoria as unknown as Categoria | null;
     }
   
     async findByName(nombre: string): Promise<Categoria | null> {
-        const categoria = await this.model.findOne({ nombre });
+        const categoria = await this.model.findOne({ nombre }).populate('user', 'name _id');
         return categoria as unknown as Categoria | null;
+    }
+
+    async findAllByUser(userId: string): Promise<Categoria[]> {
+        const uid = new Types.ObjectId(userId);
+        const categorias = await this.model.find({ user: uid }).populate('user', 'name _id');
+        return categorias as unknown as Categoria[];
+    }
+
+    async findAllForUser(userId: string): Promise<Categoria[]> {
+        const uid = new Types.ObjectId(userId);
+        const categorias = await this.model.find({
+            $or: [{ isDefault: true }, { user: uid }]
+        }).populate('user', 'name _id');
+        return categorias as unknown as Categoria[];
     }
   
     async save(categoria: Partial<Categoria>): Promise<Categoria> {

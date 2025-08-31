@@ -1,3 +1,4 @@
+import { Billetera } from "./billetera";
 import { Categoria } from "./categoria";
 
 
@@ -10,4 +11,5 @@ export class Objetivo {
     fechaInicio: Date;
     fechaEsperadaFinalizacion: Date;
     fechaFin?: Date | null;
+    billetera?: Billetera
 }
