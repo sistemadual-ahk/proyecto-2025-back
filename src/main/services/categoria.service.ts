@@ -34,7 +34,6 @@ export class CategoriaService {
 
     async create(categoriaData: Partial<Categoria>, userID: string) {
         const { nombre, descripcion, icono, color } = categoriaData;
-        this.userRepository.findById(userID);
 
         if (!nombre || nombre.trim().length === 0) {
             throw new ValidationError('El nombre de la categoría es requerido');
@@ -44,6 +43,8 @@ export class CategoriaService {
         if (existente) {
             throw new ConflictError(`Ya existe una categoría con el nombre ${nombre}`);
         }
+
+        const userRecuperado = await this.userRepository.findById(userID);
     
         const nuevaCategoria = new Categoria();
         nuevaCategoria.nombre = nombre.trim();
@@ -51,7 +52,7 @@ export class CategoriaService {
         nuevaCategoria.icono = icono || "";
         nuevaCategoria.color = color || "";
         nuevaCategoria.isDefault = false;
-        nuevaCategoria.user = userID
+        nuevaCategoria.user = userRecuperado
         
         const categoriaGuardada = await this.categoriaRepository.save(nuevaCategoria);
         return this.toDTO(categoriaGuardada);
