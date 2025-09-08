@@ -1,14 +1,23 @@
 import { Billetera } from "../models/entities/billetera";
 import { RepositorioDeBilleteras } from "@models/repositories/repositorioDeBilleteras";
 import { ValidationError, NotFoundError, ConflictError } from "../middlewares/error.middleware";
+import { RepositorioDeUsuarios } from "@models/repositories";
 
 export class BilleteraService {
-    constructor(private billeteraRepository: RepositorioDeBilleteras) {}
+    constructor(private billeteraRepository: RepositorioDeBilleteras, private userRepository: RepositorioDeUsuarios) {}
 
     async findAll() {
         const billeteras = await this.billeteraRepository.findAll();
         return billeteras.map(b => this.toDTO(b));
     }
+
+    async findAllForUser(userId?: string) {
+            if (!userId) {
+                throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
+            }
+            const billeteras = await this.billeteraRepository.findAllForUser(userId);
+            return billeteras.map(c => this.toDTO(c));
+        }
 
     async findById(id: string) {
         const billetera = await this.billeteraRepository.findById(id);
@@ -16,11 +25,13 @@ export class BilleteraService {
         return this.toDTO(billetera);
     }
 
-    async create(billeteraData: Partial<Billetera>) {
-        const { nombre, moneda, user, balance, balanceHistorico } = billeteraData;
-        if (!nombre || !moneda || !user) throw new ValidationError('Nombre, moneda y usuario son requeridos');
+    async create(billeteraData: Partial<Billetera>, userID: string) {
+        const { nombre, moneda, balance, balanceHistorico } = billeteraData;
 
-        const existente = await this.billeteraRepository.findByNameAndUser(nombre.trim(), user.name);
+        if (!nombre || !moneda) throw new ValidationError('Nombre, moneda y usuario son requeridos');
+        const userRecuperado = await this.userRepository.findById(userID);
+        if (!userRecuperado) throw new NotFoundError(`Usuario con ${userID} no encontrado`);
+        const existente = await this.billeteraRepository.findByNameAndUser(nombre.trim(), userID);
         if (existente) throw new ConflictError(`Ya existe una billetera con el nombre ${nombre} para este usuario`);
 
         const nuevaBilletera = new Billetera();
@@ -28,7 +39,7 @@ export class BilleteraService {
         nuevaBilletera.moneda = moneda;
         nuevaBilletera.balance = balance || 0;
         nuevaBilletera.balanceHistorico = balanceHistorico || 0;
-        nuevaBilletera.user = user;
+        nuevaBilletera.user = userRecuperado;
         nuevaBilletera.color = billeteraData.color || '';
 
         const guardada = await this.billeteraRepository.save(nuevaBilletera);

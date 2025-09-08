@@ -1,7 +1,8 @@
 import { UsuarioModel } from '../schemas/usuario.schema';
 import { Usuario } from '../entities/usuario';
 
-export class RepositorioDeUsuarios {
+export class 
+RepositorioDeUsuarios {
     private model: typeof UsuarioModel;
 
     constructor() {

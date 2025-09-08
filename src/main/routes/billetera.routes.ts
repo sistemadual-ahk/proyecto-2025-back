@@ -4,7 +4,9 @@ import { BilleteraController } from "@controllers/billetera.controller";
 export const createBilleteraRoutes = (billeteraController: BilleteraController): Router => {
     const router = Router();
 
-    router.get('/', billeteraController.getAllBilleteras);
+    router.get('/all', billeteraController.getAllBilleteras);
+
+    router.get('/', billeteraController.getAllBilleterasForUser);
     
     router.get('/:id', billeteraController.getBilleteraById);
     
