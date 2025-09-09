@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 import { Usuario } from '../entities/usuario';
 
 const usuarioSchema = new mongoose.Schema({
+  auth0Id:{
+    type: String,
+    required: true,
+    unique: true
+  },
   name: {
     type: String,
     required: true,
