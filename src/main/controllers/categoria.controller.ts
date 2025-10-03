@@ -3,6 +3,7 @@ import { CategoriaService } from "../services/categoria.service";
 import { asyncHandler } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
 import { ValidationError } from "../middlewares/error.middleware";
+import { RequestWithAuth } from "@middlewares/sync-user.middleware";
 
 export class CategoriaController extends BaseController {
     constructor(private categoriaService: CategoriaService) {
@@ -23,8 +24,13 @@ export class CategoriaController extends BaseController {
         return this.sendSuccess(res, 200, categoria, 'Categoría encontrada exitosamente');
     });
 
-    getAllCategoriasForUser = asyncHandler(async (req: Request, res: Response) => {
-        const userID = "68a773848761e988c438351c";
+    getAllCategoriasForUser = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+//        const userID = "68a773848761e988c438351c";
+        const userID = req.dbUser?.id;
+        console.log("UserID en getAllCategoriasForUser:", userID);
+        if (!userID) {
+          throw new ValidationError('ID de usuario no encontrado en la petición');
+        }
         const categorias = await this.categoriaService.findAllForUser(userID);
         return this.sendSuccess(res, 200, categorias);
     });

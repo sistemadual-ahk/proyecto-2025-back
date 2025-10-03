@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { BilleteraService } from "@services/billetera.service";
 import { asyncHandler, ValidationError } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
+import { RequestWithAuth } from "@middlewares/sync-user.middleware";
 
 export class BilleteraController extends BaseController {
     constructor(private billeteraService: BilleteraService) {
@@ -20,8 +21,13 @@ export class BilleteraController extends BaseController {
         return this.sendSuccess(res, 200, billetera, 'Billetera encontrada exitosamente');
     });
 
-    getAllBilleterasForUser = asyncHandler(async (req: Request, res: Response) => {
-        const userID = "68a773848761e988c438351c";
+    getAllBilleterasForUser = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        //const userID = "68a773848761e988c438351c";
+        const userID = req.dbUser?.id;
+        console.log("UserID en getAllBilleterasForUser:", userID);
+        if (!userID) {
+          throw new ValidationError('ID de usuario no encontrado en la petición');
+        }
         //req.auth.user.
         const billeteras = await this.billeteraService.findAllForUser(userID);
         return this.sendSuccess(res, 200, billeteras);
