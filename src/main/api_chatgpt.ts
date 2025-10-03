@@ -90,7 +90,7 @@ export async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio',
 
   const promptBase = `
     Analiza la siguiente información de un gasto y extrae los siguientes campos: total, fecha, descripcion (basate en el mensaje) y categoria(Comida y Bebida, Compras, Vivienda, Transporte, Vehiculos, Vida y Entretenimiento, Comunicaciones/PC, Gastos Financieros, Inversiones, Ingreso, Otros).
-    Responde ÚNICAMENTE con un objeto JSON válido, sin ningún texto adicional, saludos o explicaciones. Si no especifica fecha, pone la fecha actual. Ademas quiero que analices para que categoria es el gasto, ponelo donde mas consideres o sino en Otros.
+    Responde ÚNICAMENTE con un objeto JSON válido, sin ningún texto adicional, saludos o explicaciones. Si el usuario no especifica la fecha, ingresa el dia de hoy en el campo, PERO NO LO DEJES EN NULL. Ademas quiero que analices para que categoria es el gasto, ponelo donde mas consideres o sino en Otros.
     El formato del JSON debe ser: {"total": NUMERO, "fecha": "DD-MM-YYYY", "categoria": "TIPO_CATEGORIA"}.
     Si no puedes encontrar algún campo, usa un valor null.
   `;
@@ -173,6 +173,21 @@ export async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio',
   } catch (error) {
     console.error('Ocurrió un error en el procesamiento:', error);
   }
+}
+
+function recibirMensaje(mensaje: string) {
+  console.log('Mensaje recibido:', mensaje);
+  procesarEntrada('texto', mensaje);
+}
+
+function enviarJSON(json: string) {
+<<<<<<< Updated upstream
+  console.log('Enviando JSON:', json);
+  procesarEntrada('texto', json);
+=======
+  
+
+>>>>>>> Stashed changes
 }
 
 //procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');

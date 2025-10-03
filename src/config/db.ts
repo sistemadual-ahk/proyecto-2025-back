@@ -48,3 +48,5 @@ export class MongoDBClient {
 export const connectDB = async (): Promise<void> => {
     await MongoDBClient.connect();
 };
+
+
