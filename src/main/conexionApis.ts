@@ -2,6 +2,7 @@ import TelegramBot from 'node-telegram-bot-api';
 import { procesarEntrada } from './api_chatgpt';
 import axios from 'axios';
 import fs from 'fs';
+import { confirmacion } from './api_chatgpt';
 
 const token = process.env['TELEGRAM_BOT_TOKEN'];
 if (!token) {
@@ -27,6 +28,7 @@ bot.on('message', async (msg) => {
       await procesarEntrada('audio', localPath);
       bot.sendMessage(chatId, 'Audio procesado y guardado!');
       fs.unlinkSync(localPath);
+      
     } else if (msg.photo && msg.photo.length > 0) {
       const fileId = msg.photo[msg.photo.length - 1]?.file_id; // mejor resolución
       if (!fileId) {

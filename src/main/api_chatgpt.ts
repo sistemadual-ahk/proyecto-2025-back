@@ -9,7 +9,6 @@ dotenv.config();
 
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 
-const projectRoot = path.resolve(__dirname, '..', '..');
 const client = new OpenAI({
   apiKey: process.env['OPENAI_API_KEY'],
 });
@@ -93,7 +92,7 @@ function obtenerDiaDeHoy(){
               return `${dia}-${mes}-${anio}`;
             }
         
-
+export let confirmacion: string;
 
 export async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio', datos: string) {
   let resultadoAPI;
@@ -169,20 +168,15 @@ export async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio',
 
     console.log('Respuesta cruda de OpenAI:', respuestaDeOpenAI);
 
-    // Suponiendo que datosDeGasto.fecha puede venir null
-
-
-
     const jsonLimpio = extraerJSONDeRespuesta(respuestaDeOpenAI);
 
     if (jsonLimpio) {
         try {
             const datosDeGasto = JSON.parse(jsonLimpio);
 
-            
             console.log('Gasto procesado y listo para guardar:', datosDeGasto);
             await saveToDatabase(datosDeGasto);
-            
+            confirmacion = generarConfirmacion(datosDeGasto.monto,datosDeGasto.fecha,datosDeGasto.descripcion)
         } catch (e) {
             console.error('Error al parsear el JSON limpio:', e);
         }
@@ -195,18 +189,6 @@ export async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio',
   }
 }
 
-/*
-function recibirMensaje(mensaje: string) {
-  console.log('Mensaje recibido:', mensaje);
-  procesarEntrada('texto', mensaje);
+function generarConfirmacion(monto: Int32Array, fecha: string, descripcion:string){
+  return 'Los datos captados a partir del mensaje proporcionado son los siguientes:\n monto:' + monto + '\nfecha:' + fecha + '\ndescripcion:' + descripcion;
 }
-*/
-/*
-function enviarJSON(json: string) {
-  console.log('Enviando JSON:', json);
-  procesarEntrada('texto', json);
-}
-*/
-//procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
-//procesarEntrada('imagen', 'images/ticket.webp');
-//procesarEntrada('audio', 'audio/PTT-20250801-WA0022.opus');
