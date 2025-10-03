@@ -19,4 +19,4 @@ export const createOperacionRoutes = (operacionController: OperacionController):
     router.delete('/:id', operacionController.deleteOperacion);
 
     return router;
-}; 
+};

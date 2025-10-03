@@ -21,7 +21,7 @@ export class BilleteraController extends BaseController {
     });
 
     getAllBilleterasForUser = asyncHandler(async (req: Request, res: Response) => {
-        const userID = "68a773848761e988c438351c";
+        const userID = "68dfef090af65bc324c60f97";
         //req.auth.user.
         const billeteras = await this.billeteraService.findAllForUser(userID);
         return this.sendSuccess(res, 200, billeteras);
@@ -30,7 +30,7 @@ export class BilleteraController extends BaseController {
     createBilletera = asyncHandler(async (req: Request, res: Response) => {
         // userID hay que cambiarlo cando tengamos lo de AUTH 
         // porque recibiriamos a un ID de usuario que luego llamamos
-        const userID = "68a773848761e988c438351c";
+        const userID = "68dfef090af65bc324c60f97";
         const billeteraData = req.body;
         const nuevaBilletera = await this.billeteraService.create(billeteraData, userID);
         return this.sendSuccess(res, 201, nuevaBilletera, 'Billetera creada correctamente');

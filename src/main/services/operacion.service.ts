@@ -1,9 +1,11 @@
 import { Operacion } from "@models/entities/operacion";
 import { RepositorioDeOperaciones } from "@models/repositories/repositorioDeOperaciones";
 import { ValidationError, ConflictError, NotFoundError } from "../middlewares/error.middleware";
+import { RepositorioDeBilleteras, RepositorioDeCategorias, RepositorioDeUsuarios } from "@models/repositories";
+import { OperacionDto } from "main/dtos/operacionInputDto";
 
 export class OperacionService {
-    constructor(private operacionRepository: RepositorioDeOperaciones) {}
+    constructor(private operacionRepository: RepositorioDeOperaciones, private categoriaRepository: RepositorioDeCategorias, private billeteraRepository: RepositorioDeBilleteras, private userRepository: RepositorioDeUsuarios) {}
 
     async findAll() {
         const operaciones = await this.operacionRepository.findAll();
@@ -28,26 +30,32 @@ export class OperacionService {
         return this.toDTO(operacion);
     }
 
-    async create(operacionData: Partial<Operacion>) {
-        const { descripcion, monto, fecha, tipo, user, billetera, categoria } = operacionData;
-        if (!monto || !tipo || !user || !billetera || !categoria) {
-                throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
+    async create(operacionData: Partial<OperacionDto>) {
+        const { descripcion, monto, tipo, fecha, billeteraId, categoriaId } = operacionData;
+        if (!monto || !tipo || !billeteraId || !categoriaId) {
+                throw new ValidationError('Monto, tipo, usOperacionDtouario, billetera y categoría son requeridos');
             }
 
         if (monto === 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
 
+        const billeteraRecuperada = await this.billeteraRepository.findById(billeteraId);
+        if (!billeteraRecuperada) throw new NotFoundError(`Billetera con ${billeteraId} no encontrado`);
+        const categoriaRecuperada = await this.categoriaRepository.findById(categoriaId);
+        if (!categoriaRecuperada) throw new NotFoundError(`Categoria con ${categoriaId} no encontrado`);
+        const usaerRecuperado = await this.userRepository.findById(billeteraRecuperada.user.id);
+        if (!usaerRecuperado) throw new NotFoundError(`Categoria con ${categoriaRecuperada.user?.id} no encontrado`);
+
         const nuevaOperacion = new Operacion();
         nuevaOperacion.monto = monto;
         nuevaOperacion.descripcion = descripcion;
         nuevaOperacion.fecha = fecha;
         nuevaOperacion.tipo = tipo;
-        nuevaOperacion.billetera = billetera;
-        nuevaOperacion.user = user;
-        nuevaOperacion.categoria = categoria;
-        nuevaOperacion.categoria = categoria;
-        
+        nuevaOperacion.billetera = billeteraRecuperada;
+        nuevaOperacion.categoria = categoriaRecuperada;
+        nuevaOperacion.user = usaerRecuperado;
+
         const operacionGuardada = await this.operacionRepository.save(nuevaOperacion);
         return this.toDTO(operacionGuardada);
     }
@@ -59,7 +67,7 @@ export class OperacionService {
         }
 
         const { descripcion, monto, fecha, tipo, user, billetera, categoria } = operacionData;
-        
+
         if (monto !== 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }

@@ -13,7 +13,7 @@ app.use(cors());
 
 // middleware auth0
 // Aplica checkJwt y syncUser en ese orden
-app.use('/api', checkJwt, syncUser);
+//billeteraRecuperadaapp.use('/api', checkJwt, syncUser);
 
 // Middleware de log
 app.use((req, _res, next) => {

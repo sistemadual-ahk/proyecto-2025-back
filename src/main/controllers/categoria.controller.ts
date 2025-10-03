@@ -24,7 +24,7 @@ export class CategoriaController extends BaseController {
     });
 
     getAllCategoriasForUser = asyncHandler(async (req: Request, res: Response) => {
-        const userID = "68a773848761e988c438351c";
+        const userID = "68dfef090af65bc324c60f97";
         const categorias = await this.categoriaService.findAllForUser(userID);
         return this.sendSuccess(res, 200, categorias);
     });
@@ -41,7 +41,7 @@ export class CategoriaController extends BaseController {
     createCategoria = asyncHandler(async (req: Request, res: Response) => {
         // userID hay que cambiarlo cando tengamos lo de AUTH 
         // porque recibiriamos a un ID de usuario que luego llamamos
-        const userID = "68a773848761e988c438351c";
+        const userID = "68dfef090af65bc324c60f97";
         const categoriaData = req.body;
         const nuevaCategoria = await this.categoriaService.create(categoriaData, userID);
         return this.sendSuccess(res, 201, nuevaCategoria, 'Categoría creada correctamente');
