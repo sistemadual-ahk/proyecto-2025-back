@@ -41,11 +41,13 @@ var openai_1 = require("openai");
 var path = require("path");
 var fs = require("fs");
 var fluent_ffmpeg_1 = require("fluent-ffmpeg");
-var db_1 = require("../config/db");
 var mongoose_1 = require("mongoose");
+var dotenv_1 = require("dotenv");
+dotenv_1.default.config();
+var ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 var projectRoot = path.resolve(__dirname, '..', '..');
 var client = new openai_1.default({
-    apiKey: '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',
+    apiKey: process.env['OPENAI_API_KEY'],
 });
 function extraerJSONDeRespuesta(texto) {
     var match = texto.match(/```json\n([\s\S]*)\n```/);
@@ -62,7 +64,6 @@ function extraerJSONDeRespuesta(texto) {
 }
 function parsearAudios(audio_path) {
     return new Promise(function (resolve, reject) {
-        var ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
         fluent_ffmpeg_1.default.setFfmpegPath(ffmpegPath);
         if (!fs.existsSync(audio_path)) {
             reject("Error: El archivo de entrada \"".concat(audio_path, "\" no se encuentra."));
@@ -96,23 +97,19 @@ function saveToDatabase(operacion) {
         var nuevoGasto, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db_1.MongoDBClient.connect()];
-                case 1:
-                    _a.sent();
-                    _a.label = 2;
-                case 2:
-                    _a.trys.push([2, 4, , 5]);
+                case 0:
+                    _a.trys.push([0, 2, , 3]);
                     nuevoGasto = new OperacionModel(operacion);
                     return [4 /*yield*/, nuevoGasto.save()];
-                case 3:
+                case 1:
                     _a.sent();
                     console.log('✅ Gasto guardado en MongoDB.');
-                    return [3 /*break*/, 5];
-                case 4:
+                    return [3 /*break*/, 3];
+                case 2:
                     error_1 = _a.sent();
                     console.error('❌ Error al guardar el gasto en la base de datos:', error_1);
                     throw error_1;
-                case 5: return [2 /*return*/];
+                case 3: return [2 /*return*/];
             }
         });
     });
@@ -124,7 +121,7 @@ function procesarEntrada(tipoEntrada, datos) {
         return __generator(this, function (_d) {
             switch (_d.label) {
                 case 0:
-                    promptBase = "\n    Analiza la siguiente informaci\u00F3n de un gasto y extrae los siguientes campos: total, fecha, descripcion (basate en el mensaje) y categoria(Comida y Bebida, Compras, Vivienda, Transporte, Vehiculos, Vida y Entretenimiento, Comunicaciones/PC, Gastos Financieros, Inversiones, Ingreso, Otros).\n    Responde \u00DANICAMENTE con un objeto JSON v\u00E1lido, sin ning\u00FAn texto adicional, saludos o explicaciones. Si no especifica fecha, pone la fecha actual. Ademas quiero que analices para que categoria es el gasto, ponelo donde mas consideres o sino en Otros.\n    El formato del JSON debe ser: {\"total\": NUMERO, \"fecha\": \"DD-MM-YYYY\", \"categoria\": \"TIPO_CATEGORIA\"}.\n    Si no puedes encontrar alg\u00FAn campo, usa un valor null.\n  ";
+                    promptBase = "\n    Analiza la siguiente informaci\u00F3n de un gasto y extrae los siguientes campos: total, fecha, descripcion (basate en el mensaje) y categoria(Comida y Bebida, Compras, Vivienda, Transporte, Vehiculos, Vida y Entretenimiento, Comunicaciones/PC, Gastos Financieros, Inversiones, Ingreso, Otros).\n    Responde \u00DANICAMENTE con un objeto JSON v\u00E1lido, sin ning\u00FAn texto adicional, saludos o explicaciones. Si el usuario no especifica la fecha, ingresa el dia de hoy en el campo, PERO NO LO DEJES EN NULL. Ademas quiero que analices para que categoria es el gasto, ponelo donde mas consideres o sino en Otros.\n    El formato del JSON debe ser: {\"total\": NUMERO, \"fecha\": \"DD-MM-YYYY\", \"categoria\": \"TIPO_CATEGORIA\"}.\n    Si no puedes encontrar alg\u00FAn campo, usa un valor null.\n  ";
                     _d.label = 1;
                 case 1:
                     _d.trys.push([1, 20, , 21]);
@@ -225,6 +222,18 @@ function procesarEntrada(tipoEntrada, datos) {
         });
     });
 }
+/*
+function recibirMensaje(mensaje: string) {
+  console.log('Mensaje recibido:', mensaje);
+  procesarEntrada('texto', mensaje);
+}
+*/
+/*
+function enviarJSON(json: string) {
+  console.log('Enviando JSON:', json);
+  procesarEntrada('texto', json);
+}
+*/
 //procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
 //procesarEntrada('imagen', 'images/ticket.webp');
 //procesarEntrada('audio', 'audio/PTT-20250801-WA0022.opus');

@@ -11,7 +11,7 @@ const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 
 const projectRoot = path.resolve(__dirname, '..', '..');
 const client = new OpenAI({
-  apiKey: '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',
+  apiKey: process.env['OPENAI_API_KEY'],
 });
 
 function extraerJSONDeRespuesta(texto: string): string | null {
@@ -175,21 +175,18 @@ export async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio',
   }
 }
 
+/*
 function recibirMensaje(mensaje: string) {
   console.log('Mensaje recibido:', mensaje);
   procesarEntrada('texto', mensaje);
 }
-
+*/
+/*
 function enviarJSON(json: string) {
-<<<<<<< Updated upstream
   console.log('Enviando JSON:', json);
   procesarEntrada('texto', json);
-=======
-  
-
->>>>>>> Stashed changes
 }
-
+*/
 //procesarEntrada('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
 //procesarEntrada('imagen', 'images/ticket.webp');
 //procesarEntrada('audio', 'audio/PTT-20250801-WA0022.opus');

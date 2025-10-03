@@ -50,10 +50,8 @@ function startApp() {
                     _a.sent();
                     console.log("Conexión a la base de datos establecida. Ejecutando test de la API...");
                     // Llama a la función que inicia el procesamiento
-                    return [4 /*yield*/, (0, api_chatgpt_1.procesarEntrada)('audio', 'PTT-20250801-WA0022.opus')];
-                case 2:
-                    // Llama a la función que inicia el procesamiento
-                    _a.sent();
+                    //await procesarEntrada('audio', 'PTT-20250801-WA0022.opus');
+                    (0, api_chatgpt_1.procesarEntrada)('texto', 'Compré comida por $25 en el restaurante La Esquina el 1 de agosto.');
                     console.log("Test de la API finalizado.");
                     return [2 /*return*/];
             }
