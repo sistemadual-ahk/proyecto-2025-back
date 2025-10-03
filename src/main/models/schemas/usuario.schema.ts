@@ -9,7 +9,7 @@ const usuarioSchema = new mongoose.Schema({
   },
   name: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
     minlength: 2
   },
@@ -22,12 +22,12 @@ const usuarioSchema = new mongoose.Schema({
   },
   phoneNumber: {
     type: String,
-    required: true,
+    required: false,
     trim: true
   },
   password: {
     type: String,
-    required: true
+    required: false
   }
 }, {
   timestamps: true,
