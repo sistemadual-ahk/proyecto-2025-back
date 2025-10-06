@@ -1,63 +1,119 @@
+// src/main/bot.ts
 import TelegramBot from 'node-telegram-bot-api';
-import { procesarEntrada } from './api_chatgpt';
+import { procesarEntrada, guardarDatos, borrarDatos } from './api_chatgpt';
+import { connectDB } from '../config/db';
 import axios from 'axios';
 import fs from 'fs';
-import { confirmacion } from './api_chatgpt';
 
-const token = process.env['TELEGRAM_BOT_TOKEN'];
-if (!token) {
-  throw new Error('TELEGRAM_BOT_TOKEN is not defined in environment variables.');
-}
-const bot = new TelegramBot(token, { polling: true });
+const token = process.env['TELEGRAM_BOT_TOKEN']!;
+if (!token) throw new Error('TELEGRAM_BOT_TOKEN no está definido');
 
-bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
+async function startBot() {
+  // Conexión única a la base de datos
+  await connectDB();
 
-  try {
-    if (msg.text) {
-      await procesarEntrada('texto', msg.text);
-      bot.sendMessage(chatId, 'Texto procesado y guardado!');
-    } else if (msg.voice) {
-      const fileId = msg.voice.file_id;
-      const fileLink = await bot.getFileLink(fileId);
-      const localPath = './src/main/messages/audio.ogg';
+  const bot = new TelegramBot(token, { polling: true });
+  const userSessions: Record<number, any> = {};
 
-      // descargá el archivo
-      await downloadFile(fileLink, localPath);
-      
-      await procesarEntrada('audio', localPath);
-      bot.sendMessage(chatId, 'Audio procesado y guardado!');
-      fs.unlinkSync(localPath);
-      
-    } else if (msg.photo && msg.photo.length > 0) {
-      const fileId = msg.photo[msg.photo.length - 1]?.file_id; // mejor resolución
-      if (!fileId) {
-        bot.sendMessage(chatId, 'No se pudo obtener el archivo de la foto.');
+  // Función para descargar archivos
+  async function downloadFile(url: string, path: string) {
+    const response = await axios.get(url, { responseType: 'stream' });
+    return new Promise<void>((resolve, reject) => {
+      const writer = fs.createWriteStream(path);
+      response.data.pipe(writer);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+  }
+
+  // Manejo de mensajes
+  bot.on('message', async (msg) => {
+    const chatId = msg.chat?.id;
+    if (!chatId) return;
+
+    try {
+      let tipo: 'texto' | 'audio' | 'imagen';
+      let contenido: string;
+
+      if (msg.text) {
+        tipo = 'texto';
+        contenido = msg.text;
+      } else if (msg.voice) {
+        tipo = 'audio';
+        const fileId = msg.voice.file_id;
+        const fileLink = await bot.getFileLink(fileId);
+        const localPath = './src/main/messages/audio.ogg';
+        await downloadFile(fileLink, localPath);
+        contenido = localPath;
+      } else if (msg.photo?.length) {
+        tipo = 'imagen';
+        const fileId = msg.photo[msg.photo.length - 1]!.file_id;
+        const fileLink = await bot.getFileLink(fileId);
+        const localPath = './src/main/messages/photo.jpg';
+        await downloadFile(fileLink, localPath);
+        contenido = localPath;
+      } else {
+        bot.sendMessage(chatId, 'Solo puedo procesar texto, audio y fotos.');
         return;
       }
-      const fileLink = await bot.getFileLink(fileId);
-      const localPath = './src/main/messages/photo.jpg';
 
-      await downloadFile(fileLink, localPath);
+      const datosProcesados = await procesarEntrada(tipo, contenido);
+      userSessions[chatId] = datosProcesados;
 
-      await procesarEntrada('imagen', localPath);
-      bot.sendMessage(chatId, 'Imagen procesada y guardada!');
-      fs.unlinkSync(localPath);
-    } else {
-      bot.sendMessage(chatId, 'Solo puedo procesar texto, audio y fotos por ahora.');
+      await bot.sendMessage(chatId, `📋 Datos detectados:\n${JSON.stringify(datosProcesados, null, 2)}\n\n¿Deseás confirmarlos?`, {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '✅ Confirmar', callback_data: 'confirmar' },
+              { text: '✏️ Editar', callback_data: 'editar' },
+              { text: '❌ Cancelar', callback_data: 'cancelar' },
+            ],
+          ],
+        },
+      });
+
+    } catch (e) {
+      console.error(e);
+      bot.sendMessage(chatId, '❌ Error al procesar el mensaje.');
     }
-  } catch (e) {
-    console.error(e);
-    bot.sendMessage(chatId, 'Error al procesar el mensaje.');
-  }
-});
+  });
 
-async function downloadFile(url: string, path: string) {
-  const response = await axios.get(url, { responseType: 'stream' });
-  return new Promise<void>((resolve, reject) => {
-    const writer = fs.createWriteStream(path);
-    response.data.pipe(writer);
-    writer.on('finish', resolve);
-    writer.on('error', reject);
+  // Manejo de botones
+  bot.on('callback_query', async (query) => {
+    const chatId = query.message!.chat.id;
+    if (!chatId) return;
+
+    const data = query.data;
+    if (!data) return; 
+
+    const sessionData = userSessions[chatId];
+    if (!sessionData) {
+        // Enviar un mensaje de error o simplemente terminar si no hay sesión
+        bot.sendMessage(chatId, '❌ No se encontró una sesión activa para esta operación.');
+        return;
+    }
+
+    if (data === 'confirmar') {
+      await guardarDatos(userSessions[chatId]);
+      bot.sendMessage(chatId, '✅ Datos confirmados.');
+      delete userSessions[chatId];
+    } else if (data === 'editar') {
+      bot.sendMessage(chatId, '✏️ Ingresá los nuevos datos:');
+      bot.once('message', async (msg) => {
+        userSessions[chatId] = msg.text;
+        await guardarDatos(userSessions[chatId]);
+        bot.sendMessage(chatId, '✅ Datos actualizados.');
+        delete userSessions[chatId];
+      });
+    } else if (data === 'cancelar') {
+      await borrarDatos(userSessions[chatId]);
+      bot.sendMessage(chatId, '❌ Operación cancelada.');
+      delete userSessions[chatId];
+    }
+
+    bot.answerCallbackQuery(query.id);
   });
 }
+
+// Ejecutar bot
+startBot().catch(console.error);
