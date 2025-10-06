@@ -4,7 +4,8 @@ import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
-import dotenv from 'dotenv'
+import dotenv from 'dotenv';
+import { MongoDBClient } from '../config/db';
 
 dotenv.config();
 
@@ -64,8 +65,7 @@ export async function procesarEntrada(tipoEntrada: 'texto' | 'imagen' | 'audio',
   const promptBase = `
 TENER EN CUENTA QUE EL DIA DE HOY ES ${obtenerDiaDeHoy()}
 Analiza la siguiente información de un gasto y extrae los siguientes campos: total, fecha, descripcion y categoria.
-Responde ÚNICAMENTE con un JSON válido: {"monto": NUMERO, "fecha": "DD-MM-YYYY", "categoria": "TIPO_CATEGORIA", "descripcion": "texto"}.
-Si no puedes encontrar algún campo, usa null.
+Responde ÚNICAMENTE con un JSON válido: {"monto": NUMERO, "fecha": "DD-MM-YYYY", "categoria": "TIPO_CATEGORIA", "descripcion": "texto"}. NO DEJES NINGUN CAMPO EN NULL, si no te aclaran la fecha pone la de hoy. La categoria pone uno de estos valores que mas consideres segun el mensaje: Comida y Bebida, Compras, Vivienda, Transporte, Vehiculos, Vida y Entretenimiento, Comunicaciones/PC, Gastos Financieros, Inversiones, Ingreso, Otros.
   `;
 
   let resultadoAPI: any;
@@ -112,6 +112,7 @@ Si no puedes encontrar algún campo, usa null.
 // Guardar y borrar datos
 export async function guardarDatos(operacion: any) {
   try {
+    await MongoDBClient.connect();
     const nuevoGasto = new OperacionModel(operacion);
     await nuevoGasto.save();
     console.log('✅ Datos guardados en MongoDB');

@@ -1,7 +1,6 @@
 // src/main/bot.ts
 import TelegramBot from 'node-telegram-bot-api';
 import { procesarEntrada, guardarDatos, borrarDatos } from './api_chatgpt';
-import { connectDB } from '../config/db';
 import axios from 'axios';
 import fs from 'fs';
 
@@ -10,7 +9,6 @@ if (!token) throw new Error('TELEGRAM_BOT_TOKEN no está definido');
 
 async function startBot() {
   // Conexión única a la base de datos
-  await connectDB();
 
   const bot = new TelegramBot(token, { polling: true });
   const userSessions: Record<number, any> = {};
@@ -60,7 +58,7 @@ async function startBot() {
       const datosProcesados = await procesarEntrada(tipo, contenido);
       userSessions[chatId] = datosProcesados;
 
-      await bot.sendMessage(chatId, `📋 Datos detectados:\n${JSON.stringify(datosProcesados, null, 2)}\n\n¿Deseás confirmarlos?`, {
+      await bot.sendMessage(chatId, `📋 Datos detectados:\n Monto: ${datosProcesados.monto}\nFecha: ${datosProcesados.fecha}\nCategoria: ${datosProcesados.categoria}\nDescripción: ${datosProcesados.descripcion}"\n¿Deseás confirmarlos?`, {
         reply_markup: {
           inline_keyboard: [
             [
