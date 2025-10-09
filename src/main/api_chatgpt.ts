@@ -133,3 +133,4 @@ export async function borrarDatos(operacion: any) {
     console.error('❌ Error al borrar datos:', error);
   }
 }
+
