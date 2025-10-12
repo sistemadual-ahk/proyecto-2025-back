@@ -1,7 +1,7 @@
 // src/middlewares/sync-user.middleware.ts
 import { Request, Response, NextFunction } from 'express';
-import { UsuarioModel } from '../models/schemas/usuario.schema'; // Importa tu modelo actualizado
-// Opcional: Extender el objeto Request para que TypeScript lo entienda mejor
+import { UsuarioModel } from '../models/schemas/usuario.schema';
+
 export interface RequestWithAuth extends Request {
   auth?: { sub?: string; email?: string; name?: string; };
   dbUser?: any;
@@ -18,13 +18,8 @@ export const syncUser = async (req: RequestWithAuth, res: Response, next: NextFu
     // Buscar al usuario usando el auth0Id
     let user = await UsuarioModel.findOne({ auth0Id: auth0User.sub });
 
-    if(!user) {
-      next();
-      return;
-    }
-
-    /*if (!user) {
-      // Si el usuario no existe, créalo con la información del token
+    // Si el usuario no existe, créalo
+    if (!user) {
       user = new UsuarioModel({
         auth0Id: auth0User.sub,
         mail: auth0User.email, 
@@ -32,9 +27,9 @@ export const syncUser = async (req: RequestWithAuth, res: Response, next: NextFu
       });
       await user.save();
       console.log(`Nuevo usuario sincronizado con ID de Auth0: ${user.auth0Id}`);
-    }*/
+    }
 
-    // Adjuntar el usuario de la DB a la petición
+    // Adjuntar el usuario de la DB a la petición (ya sea el encontrado o el recién creado)
     req.dbUser = user;
 
     next();
