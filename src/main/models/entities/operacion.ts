@@ -12,4 +12,5 @@ export class Operacion {
    fecha?: Date;
    tipo?: TipoOperacion;
    user?: Usuario
+    nuevaOperacion: Billetera;
 }

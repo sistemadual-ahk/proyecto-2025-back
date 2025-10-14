@@ -1,9 +1,11 @@
 import { Operacion } from "@models/entities/operacion";
 import { RepositorioDeOperaciones } from "@models/repositories/repositorioDeOperaciones";
 import { ValidationError, ConflictError, NotFoundError } from "../middlewares/error.middleware";
+import { RepositorioDeBilleteras, RepositorioDeCategorias, RepositorioDeUsuarios } from "@models/repositories";
+import { OperacionDto } from "main/dtos/operacionInputDto";
 
 export class OperacionService {
-    constructor(private operacionRepository: RepositorioDeOperaciones) {}
+    constructor(private operacionRepository: RepositorioDeOperaciones, private categoriaRepository: RepositorioDeCategorias, private billeteraRepository: RepositorioDeBilleteras, private userRepository: RepositorioDeUsuarios) {}
 
     // ----------------------------------------------------------------------
     // MÉTODOS FILTRADOS POR USUARIO (NUEVOS - Requeridos por el Controller)
@@ -70,6 +72,7 @@ export class OperacionService {
         return this.toDTO(operacion);
     }
 
+<<<<<<< HEAD
     // ----------------------------------------------------------------------
     // CREATE (Se asume que operacionData ya incluye el ID de usuario desde el Controller)
     // ----------------------------------------------------------------------
@@ -78,20 +81,41 @@ export class OperacionService {
         if (!monto || !tipo || !user || !billetera || !categoria) {
             throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
         }
+=======
+    async create(operacionData: Partial<OperacionDto>) {
+        const { descripcion, monto, tipo, fecha, billeteraId, categoriaId } = operacionData;
+        if (!monto || !tipo || !billeteraId || !categoriaId) {
+                throw new ValidationError('Monto, tipo, usOperacionDtouario, billetera y categoría son requeridos');
+            }
+>>>>>>> 21461013f068e6092f8f998b9a616fc483f57926
 
         if (monto === 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
+
+        const billeteraRecuperada = await this.billeteraRepository.findById(billeteraId);
+        if (!billeteraRecuperada) throw new NotFoundError(`Billetera con ${billeteraId} no encontrado`);
+        const categoriaRecuperada = await this.categoriaRepository.findById(categoriaId);
+        if (!categoriaRecuperada) throw new NotFoundError(`Categoria con ${categoriaId} no encontrado`);
+        const usaerRecuperado = await this.userRepository.findById(billeteraRecuperada.user.id);
+        if (!usaerRecuperado) throw new NotFoundError(`Categoria con ${categoriaRecuperada.user?.id} no encontrado`);
 
         const nuevaOperacion = new Operacion();
         nuevaOperacion.monto = monto;
         nuevaOperacion.descripcion = descripcion;
         nuevaOperacion.fecha = fecha;
         nuevaOperacion.tipo = tipo;
+<<<<<<< HEAD
         nuevaOperacion.billetera = billetera;
         nuevaOperacion.user = user;
         nuevaOperacion.categoria = categoria;
         
+=======
+        nuevaOperacion.billetera = billeteraRecuperada;
+        nuevaOperacion.categoria = categoriaRecuperada;
+        nuevaOperacion.user = usaerRecuperado;
+
+>>>>>>> 21461013f068e6092f8f998b9a616fc483f57926
         const operacionGuardada = await this.operacionRepository.save(nuevaOperacion);
         return this.toDTO(operacionGuardada);
     }
@@ -106,10 +130,15 @@ export class OperacionService {
         }
 
         const { descripcion, monto, fecha, tipo, user, billetera, categoria } = operacionData;
+<<<<<<< HEAD
         
         // CORRECCIÓN: Esta validación estaba al revés: si el monto NO es 0, no lanzar error.
         // Pero si se lanza si el monto es 0, debería ser:
         if (monto !== undefined && monto === 0) {
+=======
+
+        if (monto !== 0) {
+>>>>>>> 21461013f068e6092f8f998b9a616fc483f57926
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
         

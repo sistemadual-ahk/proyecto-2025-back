@@ -15,12 +15,14 @@ app.use(cors());
 // Aplica checkJwt y syncUser en ese orden
 app.use(checkJwt);
 app.use(syncUser); // Usa el middleware de sincronización después de checkJwt
-
 // Middleware de log
 app.use((req, _res, next) => {
   console.log(`Método: ${req.method} - URL: ${req.url}`);
   next();
 });
+
+app.use('/api', checkJwt, syncUser);
+
 
 routes.forEach(route => app.use(route.path, route.handler));
 
