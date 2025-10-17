@@ -9,8 +9,21 @@ export class OperacionController extends BaseController {
         super();
     }
 
-    getAllOperaciones = asyncHandler(async (_req: Request, res: Response) => {
-        const operaciones = await this.operacionService.findAll();
+    getAllOperaciones = asyncHandler(async (req: Request, res: Response) => {
+        const { tipo, categoriaId, billeteraId, desde, hasta } = req.query as any;
+
+        if (!tipo && !categoriaId && !billeteraId && !desde && !hasta) {
+            const operaciones = await this.operacionService.findAll();
+            return this.sendSuccess(res, 200, operaciones);
+        }
+
+        const operaciones = await this.operacionService.findByFilters({
+            tipo,
+            categoriaId,
+            billeteraId,
+            desde,
+            hasta
+        });
         return this.sendSuccess(res, 200, operaciones);
     });
 

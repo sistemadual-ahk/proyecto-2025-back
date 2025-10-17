@@ -12,6 +12,28 @@ export class OperacionService {
         return operaciones.map(o => this.toDTO(o));
     }
 
+    async findByFilters(filters: {
+        tipo?: string;
+        categoriaId?: string;
+        billeteraId?: string;
+        desde?: string;
+        hasta?: string;
+    }) {
+        const { tipo, categoriaId, billeteraId, desde, hasta } = filters;
+
+        const parsedDesde = desde ? new Date(desde) : undefined;
+        const parsedHasta = hasta ? new Date(hasta) : undefined;
+
+        const operaciones = await this.operacionRepository.findByFilters({
+            tipo,
+            categoriaId,
+            billeteraId,
+            desde: parsedDesde,
+            hasta: parsedHasta
+        });
+        return operaciones.map(o => this.toDTO(o));
+    }
+
     async findAllEgresos() {
         const operaciones = await this.operacionRepository.findByTipo('Egreso');
         return operaciones.map(o => this.toDTO(o));

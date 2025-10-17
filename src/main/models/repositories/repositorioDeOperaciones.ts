@@ -32,6 +32,44 @@ export class RepositorioDeOperaciones {
         return operaciones as unknown as Operacion[];
     }
 
+    async findByFilters(filters: {
+        tipo?: string;
+        categoriaId?: string;
+        billeteraId?: string;
+        desde?: Date;
+        hasta?: Date;
+    }): Promise<Operacion[]> {
+        const query: any = {};
+
+        if (filters.tipo) {
+            query.tipo = filters.tipo;
+        }
+
+        if (filters.categoriaId) {
+            query.categoria = filters.categoriaId;
+        }
+
+        if (filters.billeteraId) {
+            query.billetera = filters.billeteraId;
+        }
+
+        if (filters.desde || filters.hasta) {
+            query.fecha = {};
+            if (filters.desde) {
+                query.fecha.$gte = filters.desde;
+            }
+            if (filters.hasta) {
+                query.fecha.$lte = filters.hasta;
+            }
+        }
+
+        const operaciones = await this.model.find(query)
+            .populate('categoria')
+            .populate('billetera')
+            .populate('user');
+        return operaciones as unknown as Operacion[];
+    }
+
     async save(operacion: Partial<Operacion>): Promise<Operacion> {
         if (operacion.id) {
             const operacionActualizada = await this.model.findByIdAndUpdate(
