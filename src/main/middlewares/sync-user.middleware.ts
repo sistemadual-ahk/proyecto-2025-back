@@ -7,20 +7,20 @@ export interface RequestWithAuth extends Request {
   dbUser?: any;
 }
 
-export const syncUser = async (req: RequestWithAuth, res: Response, next: NextFunction) => {
+export const syncUser = async (req: RequestWithAuth, res: Response, next: NextFunction): Promise<void> => {
   try {
     const auth0User = req.auth; 
     
     if (!auth0User || !auth0User.sub) {
-      return res.status(401).send('No se encontró la información del usuario.');
+      res.status(401).send('No se encontró la información del usuario.');
+      return;
     }
 
     // Buscar al usuario usando el auth0Id
     let user = await UsuarioModel.findOne({ auth0Id: auth0User.sub });
 
     if(!user) {
-      next();
-      return;
+      return next();
     }
 
     /*if (!user) {
@@ -36,10 +36,10 @@ export const syncUser = async (req: RequestWithAuth, res: Response, next: NextFu
 
     // Adjuntar el usuario de la DB a la petición
     req.dbUser = user;
-
-    next();
+    return next();
   } catch (error) {
     console.error('Error al sincronizar el usuario:', error);
     res.status(500).send('Error interno del servidor.');
+    return;
   }
 };
