@@ -4,56 +4,55 @@ import { ValidationError, ConflictError, NotFoundError } from "../middlewares/er
 import { RepositorioDeBilleteras, RepositorioDeCategorias, RepositorioDeUsuarios } from "@models/repositories";
 import { OperacionDto } from "main/dtos/operacionInputDto";
 
+// CRÍTICO: Definimos un tipo que incluye todos los campos esperados, 
+// incluso los que el Controller adjunta (user).
+type OperacionInputData = {
+    monto: number;
+    tipo: string; // Recibimos 'income'/'expense'
+    billetera: string; // Asumimos que viene el ID
+    categoria: string; // Asumimos que viene el ID
+    user: string;      // CRÍTICO: Viene inyectado desde el Controller
+    descripcion?: string;
+    fecha?: Date;
+};
+
+
 export class OperacionService {
-    constructor(private operacionRepository: RepositorioDeOperaciones, private categoriaRepository: RepositorioDeCategorias, private billeteraRepository: RepositorioDeBilleteras, private userRepository: RepositorioDeUsuarios) {}
+    constructor(
+        private operacionRepository: RepositorioDeOperaciones,
+        private categoriaRepository: RepositorioDeCategorias,
+        private billeteraRepository: RepositorioDeBilleteras,
+        private userRepository: RepositorioDeUsuarios
+    ) { }
 
     // ----------------------------------------------------------------------
-    // MÉTODOS FILTRADOS POR USUARIO (NUEVOS - Requeridos por el Controller)
+    // MÉTODOS FILTRADOS POR USUARIO
     // ----------------------------------------------------------------------
 
-    /**
-     * Busca todas las operaciones (Ingresos y Egresos) para un usuario específico.
-     * @param userId ID del usuario autenticado (viene de req.dbUser.id).
-     */
     async findAllForUser(userId: string) {
-        // Asume que RepositorioDeOperaciones tiene un método findAllByUserId(userId)
         const operaciones = await this.operacionRepository.findAllByUserId(userId);
         return operaciones.map(o => this.toDTO(o));
     }
 
-    /**
-     * Busca todas las operaciones de tipo 'Egreso' para un usuario específico.
-     * @param userId ID del usuario.
-     */
     async findAllEgresosForUser(userId: string) {
-        // Asume que RepositorioDeOperaciones tiene un método findByTipoAndUserId(tipo, userId)
         const operaciones = await this.operacionRepository.findByTipoAndUserId('Egreso', userId);
         return operaciones.map(o => this.toDTO(o));
     }
 
-    /**
-     * Busca todas las operaciones de tipo 'Ingreso' para un usuario específico.
-     * @param userId ID del usuario.
-     */
     async findAllIngresosForUser(userId: string) {
-        // Asume que RepositorioDeOperaciones tiene un método findByTipoAndUserId(tipo, userId)
         const operaciones = await this.operacionRepository.findByTipoAndUserId('Ingreso', userId);
         return operaciones.map(o => this.toDTO(o));
     }
 
     // ----------------------------------------------------------------------
-    // MÉTODOS EXISTENTES (Modificados para usar findAllForUser si es posible)
+    // MÉTODOS EXISTENTES
     // ----------------------------------------------------------------------
 
-    // Dejamos este findAll() para casos administrativos, aunque en un frontend
-    // protegido, se suele usar findAllForUser.
     async findAll() {
         const operaciones = await this.operacionRepository.findAll();
         return operaciones.map(o => this.toDTO(o));
     }
 
-    // Estos métodos existentes, si no reciben userId, probablemente no se usarán
-    // directamente en las rutas protegidas, pero los mantenemos.
     async findAllEgresos() {
         const operaciones = await this.operacionRepository.findByTipo('Egreso');
         return operaciones.map(o => this.toDTO(o));
@@ -72,56 +71,60 @@ export class OperacionService {
         return this.toDTO(operacion);
     }
 
-<<<<<<< HEAD
     // ----------------------------------------------------------------------
-    // CREATE (Se asume que operacionData ya incluye el ID de usuario desde el Controller)
+    // CREATE (CORREGIDO)
     // ----------------------------------------------------------------------
-    async create(operacionData: Partial<Operacion>) {
-        const { descripcion, monto, fecha, tipo, user, billetera, categoria } = operacionData;
+    async create(operacionData: OperacionInputData) {
+        const { descripcion, monto, tipo, fecha, billetera, categoria, user } = operacionData;
+
+        // 1. Validación de campos requeridos (incluye 'user', inyectado por el Controller)
         if (!monto || !tipo || !user || !billetera || !categoria) {
             throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
         }
-=======
-    async create(operacionData: Partial<OperacionDto>) {
-        const { descripcion, monto, tipo, fecha, billeteraId, categoriaId } = operacionData;
-        if (!monto || !tipo || !billeteraId || !categoriaId) {
-                throw new ValidationError('Monto, tipo, usOperacionDtouario, billetera y categoría son requeridos');
-            }
->>>>>>> 21461013f068e6092f8f998b9a616fc483f57926
 
         if (monto === 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
 
-        const billeteraRecuperada = await this.billeteraRepository.findById(billeteraId);
-        if (!billeteraRecuperada) throw new NotFoundError(`Billetera con ${billeteraId} no encontrado`);
-        const categoriaRecuperada = await this.categoriaRepository.findById(categoriaId);
-        if (!categoriaRecuperada) throw new NotFoundError(`Categoria con ${categoriaId} no encontrado`);
-        const usaerRecuperado = await this.userRepository.findById(billeteraRecuperada.user.id);
-        if (!usaerRecuperado) throw new NotFoundError(`Categoria con ${categoriaRecuperada.user?.id} no encontrado`);
+        // 2. Traducción y validación del tipo de operación (CRÍTICO)
+        let tipoFinal: string;
+        if (tipo === 'income') {
+            tipoFinal = 'Ingreso';
+        } else if (tipo === 'expense') {
+            tipoFinal = 'Egreso';
+        } else {
+            throw new ValidationError('El tipo de operacion debe ser Ingreso o Egreso');
+        }
 
+        // 3. Verificación de existencia y recuperación de OBJETOS para Mongoose
+        const billeteraRecuperada = await this.billeteraRepository.findById(billetera as string);
+        if (!billeteraRecuperada) throw new NotFoundError(`Billetera con ID ${billetera} no encontrada`);
+
+        const categoriaRecuperada = await this.categoriaRepository.findById(categoria as string);
+        if (!categoriaRecuperada) throw new NotFoundError(`Categoria con ID ${categoria} no encontrada`);
+
+        // Recuperamos el objeto Usuario completo para Mongoose
+        const usuarioRecuperado = await this.userRepository.findById(user);
+        if (!usuarioRecuperado) throw new NotFoundError(`Usuario con ID ${user} no encontrado`);
+
+        // 4. Creación y asignación de la entidad
         const nuevaOperacion = new Operacion();
         nuevaOperacion.monto = monto;
         nuevaOperacion.descripcion = descripcion;
         nuevaOperacion.fecha = fecha;
-        nuevaOperacion.tipo = tipo;
-<<<<<<< HEAD
-        nuevaOperacion.billetera = billetera;
-        nuevaOperacion.user = user;
-        nuevaOperacion.categoria = categoria;
-        
-=======
+        nuevaOperacion.tipo = tipoFinal as any; // Usamos el valor traducido
+
+        // Asignamos las entidades/objetos recuperados
         nuevaOperacion.billetera = billeteraRecuperada;
         nuevaOperacion.categoria = categoriaRecuperada;
-        nuevaOperacion.user = usaerRecuperado;
+        nuevaOperacion.user = usuarioRecuperado;
 
->>>>>>> 21461013f068e6092f8f998b9a616fc483f57926
         const operacionGuardada = await this.operacionRepository.save(nuevaOperacion);
         return this.toDTO(operacionGuardada);
     }
 
     // ----------------------------------------------------------------------
-    // UPDATE y DELETE (Sin cambios por ahora)
+    // UPDATE y DELETE 
     // ----------------------------------------------------------------------
     async update(id: string, operacionData: Partial<Operacion>) {
         const operacionExistente = await this.operacionRepository.findById(id);
@@ -130,25 +133,17 @@ export class OperacionService {
         }
 
         const { descripcion, monto, fecha, tipo, user, billetera, categoria } = operacionData;
-<<<<<<< HEAD
-        
-        // CORRECCIÓN: Esta validación estaba al revés: si el monto NO es 0, no lanzar error.
-        // Pero si se lanza si el monto es 0, debería ser:
-        if (monto !== undefined && monto === 0) {
-=======
 
-        if (monto !== 0) {
->>>>>>> 21461013f068e6092f8f998b9a616fc483f57926
+        if (monto !== undefined && monto === 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
-        
+
         const operacionActualizada = {
             id: id,
-            monto: monto || operacionExistente.monto,
+            monto: monto !== undefined ? monto : operacionExistente.monto,
             descripcion: descripcion || operacionExistente.descripcion,
             fecha: fecha || operacionExistente.fecha,
             tipo: tipo || operacionExistente.tipo,
-            // Aquí hay que manejar los IDs de billetera, user y categoría si vienen en operacionData
         };
 
         const resultado = await this.operacionRepository.save(operacionActualizada);
@@ -164,7 +159,7 @@ export class OperacionService {
     }
 
     // ----------------------------------------------------------------------
-    // DTO MAPPING (Sin cambios)
+    // DTO MAPPING
     // ----------------------------------------------------------------------
     private toDTO(operacion: Operacion) {
         return {
