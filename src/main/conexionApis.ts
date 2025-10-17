@@ -17,10 +17,6 @@ const token = process.env['TELEGRAM_BOT_TOKEN']!;
 const userSessions: Record<number, UserSession> = {};
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN no está definido');
 
-// ====================================================================
-// FUNCIONES DE VALIDACIÓN
-// ====================================================================
-
 function chequearEnteroDesdeMensaje(textoRecibido: string): number | null {
     const valorLimpio = textoRecibido.trim();
     if (valorLimpio === '') return null;
@@ -64,9 +60,6 @@ function chequearFechaDesdeMensaje(textoRecibido: string): string | null {
     return null;
 }
 
-// ====================================================================
-// LÓGICA DEL BOT Y AYUDANTES DE FLUJO
-// ====================================================================
 
 function datosCompletos(datos: any): boolean {
     return datos.monto && datos.fecha && datos.categoria && datos.descripcion;
@@ -164,9 +157,6 @@ async function startBot() {
         mostrarMenuEdicion(bot, chatId, session);
     }
 
-    // ====================================================================
-    // HANDLER PRINCIPAL DE MENSAJES (CORREGIDO)
-    // ====================================================================
     bot.on('message', async (msg) => {
         const chatId = msg.chat?.id;
         if (!chatId) return;
@@ -174,15 +164,12 @@ async function startBot() {
         const session = userSessions[chatId];
         const nuevoValor = msg.text || ''; 
 
-        // ----------------------------------------------------
-        // LÓGICA DE EDICIÓN ACTIVA (PRIORIDAD AL ESTADO)
-        // ----------------------------------------------------
         if (session?.estado === 'esperando_monto') {
             await manejarValidacionMonto(chatId, nuevoValor, session);
             return; 
         }
         
-        // **ESTA LÍNEA ES CRUCIAL, ASEGURAR QUE SE LLAMA CORRECTAMENTE**
+        
         if (session?.estado === 'esperando_fecha') {
             await manejarValidacionFecha(chatId, nuevoValor, session);
             return; 
@@ -200,9 +187,7 @@ async function startBot() {
             return;
         }
 
-        // ----------------------------------------------------
-        // LÓGICA DE PROCESAMIENTO INICIAL
-        // ----------------------------------------------------
+
         try {
             let tipo: 'texto' | 'audio' | 'imagen';
             let contenido: string;
@@ -270,9 +255,7 @@ async function startBot() {
         }
     });
 
-    // ====================================================================
-    // HANDLER DE CALLBACK QUERIES
-    // ====================================================================
+
     bot.on('callback_query', async (query) => {
         const chatId = query.message!.chat.id;
         if (!chatId) return;
