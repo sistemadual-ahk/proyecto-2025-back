@@ -5,8 +5,8 @@ import fs from 'fs';
 
 interface UserSession {
     modoEdicion: boolean;
-    estado?: string; 
-    campo?: string; 
+    estado?: 'esperando_monto' | 'esperando_fecha' | 'esperando_general' | 'menu_principal';
+    campo?: 'monto' | 'fecha' | 'categoria' | 'descripcion';
     monto?: number | string;
     fecha?: string;
     categoria?: string;
@@ -17,11 +17,15 @@ const token = process.env['TELEGRAM_BOT_TOKEN']!;
 const userSessions: Record<number, UserSession> = {};
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN no está definido');
 
+// ====================================================================
+// FUNCIONES DE VALIDACIÓN
+// ====================================================================
+
 function chequearEnteroDesdeMensaje(textoRecibido: string): number | null {
     const valorLimpio = textoRecibido.trim();
-
     if (valorLimpio === '') return null;
     const numeroConvertido = Number(valorLimpio);
+
     if (
         !isNaN(numeroConvertido) &&
         isFinite(numeroConvertido) &&
@@ -34,6 +38,36 @@ function chequearEnteroDesdeMensaje(textoRecibido: string): number | null {
     return null;
 }
 
+function chequearFechaDesdeMensaje(textoRecibido: string): string | null {
+    const valorLimpio = textoRecibido.trim();
+    const regexFecha = /^(\d{2})-(\d{2})-(\d{4})$/;
+    const match = valorLimpio.match(regexFecha);
+
+    if (!match) {
+        return null;
+    }
+
+    const dia = parseInt(match[1], 10);
+    const mes = parseInt(match[2], 10);
+    const anio = parseInt(match[3], 10);
+
+    const fecha = new Date(anio, mes - 1, dia);
+
+    if (
+        fecha.getFullYear() === anio &&
+        fecha.getMonth() === mes - 1 &&
+        fecha.getDate() === dia
+    ) {
+        return valorLimpio; 
+    }
+
+    return null;
+}
+
+// ====================================================================
+// LÓGICA DEL BOT Y AYUDANTES DE FLUJO
+// ====================================================================
+
 function datosCompletos(datos: any): boolean {
     return datos.monto && datos.fecha && datos.categoria && datos.descripcion;
 }
@@ -42,7 +76,6 @@ function camposFaltantes(datos: any): string[] {
     const campos = ['monto', 'fecha', 'categoria', 'descripcion'];
     return campos.filter(c => !datos[c]);
 }
-
 
 async function startBot() {
     const bot = new TelegramBot(token, { polling: true });
@@ -55,10 +88,6 @@ async function startBot() {
             writer.on('finish', resolve);
             writer.on('error', reject);
         });
-    }
-
-    function chequearFecha(){
-      
     }
 
     function mostrarMenuEdicion(bot: TelegramBot, chatId: number, datos: any) {
@@ -90,32 +119,54 @@ async function startBot() {
     }
 
     async function manejarValidacionMonto(chatId: number, nuevoValor: string, session: UserSession) {
-        const campo = session.campo; // 'monto'
-
-        // 1. Validar el input
+        const campo = session.campo as string;
         const montoNumerico = chequearEnteroDesdeMensaje(nuevoValor);
 
         if (montoNumerico === null) {
             await bot.sendMessage(chatId, '⚠️ El monto debe ser un *número entero válido*. Intenta de nuevo.', {
                 parse_mode: 'Markdown'
             });
-
             await bot.sendMessage(chatId, `✏️ Ingresá el nuevo valor para *${campo}*:`, {
                 parse_mode: 'Markdown',
                 reply_markup: { force_reply: true },
             });
-            
             return; 
         }
+
         session.monto = montoNumerico; 
-        
         session.estado = undefined; 
         session.campo = undefined;
         
-
         await bot.sendMessage(chatId, `✅ ${campo} actualizado. Nuevo valor: ${montoNumerico}`);
         mostrarMenuEdicion(bot, chatId, session);
     }
+    
+    async function manejarValidacionFecha(chatId: number, nuevoValor: string, session: UserSession) {
+        const campo = session.campo as string;
+        const fechaValida = chequearFechaDesdeMensaje(nuevoValor);
+
+        if (fechaValida === null) {
+            await bot.sendMessage(chatId, '⚠️ La fecha debe ser válida y tener el formato *DD-MM-AAAA* (ej: 25-12-2025). Intenta de nuevo.', {
+                parse_mode: 'Markdown'
+            });
+            await bot.sendMessage(chatId, `✏️ Ingresá el nuevo valor para *${campo}*:`, {
+                parse_mode: 'Markdown',
+                reply_markup: { force_reply: true },
+            });
+            return; 
+        }
+
+        session.fecha = fechaValida; 
+        session.estado = undefined; 
+        session.campo = undefined;
+        
+        await bot.sendMessage(chatId, `✅ ${campo} actualizado. Nuevo valor: ${fechaValida}`);
+        mostrarMenuEdicion(bot, chatId, session);
+    }
+
+    // ====================================================================
+    // HANDLER PRINCIPAL DE MENSAJES (CORREGIDO)
+    // ====================================================================
     bot.on('message', async (msg) => {
         const chatId = msg.chat?.id;
         if (!chatId) return;
@@ -123,76 +174,95 @@ async function startBot() {
         const session = userSessions[chatId];
         const nuevoValor = msg.text || ''; 
 
+        // ----------------------------------------------------
+        // LÓGICA DE EDICIÓN ACTIVA (PRIORIDAD AL ESTADO)
+        // ----------------------------------------------------
         if (session?.estado === 'esperando_monto') {
             await manejarValidacionMonto(chatId, nuevoValor, session);
             return; 
         }
         
+        // **ESTA LÍNEA ES CRUCIAL, ASEGURAR QUE SE LLAMA CORRECTAMENTE**
+        if (session?.estado === 'esperando_fecha') {
+            await manejarValidacionFecha(chatId, nuevoValor, session);
+            return; 
+        }
+        
+        if (session?.modoEdicion && session.estado === 'esperando_general') {
+            const campo = session.campo as string;
+            session[campo as keyof UserSession] = nuevoValor.trim();
+            
+            session.estado = undefined; 
+            session.campo = undefined;
 
-        if (session?.modoEdicion) {
+            await bot.sendMessage(chatId, `✅ ${campo} actualizado. Nuevo valor: ${nuevoValor.trim()}`);
+            mostrarMenuEdicion(bot, chatId, session);
             return;
         }
+
+        // ----------------------------------------------------
+        // LÓGICA DE PROCESAMIENTO INICIAL
+        // ----------------------------------------------------
         try {
-      
             let tipo: 'texto' | 'audio' | 'imagen';
             let contenido: string;
-        
+
             if (msg.text) {
-              tipo = 'texto';
-              contenido = msg.text;
+                tipo = 'texto';
+                contenido = msg.text;
             } else if (msg.voice) {
-              tipo = 'audio';
-              const fileId = msg.voice.file_id;
-              const fileLink = await bot.getFileLink(fileId);
-              const localPath = './src/main/messages/audio.ogg';
-              await downloadFile(fileLink, localPath);
-              contenido = localPath;
+                tipo = 'audio';
+                const fileId = msg.voice.file_id;
+                const fileLink = await bot.getFileLink(fileId);
+                const localPath = './src/main/messages/audio.ogg';
+                await downloadFile(fileLink, localPath);
+                contenido = localPath;
             } else if (msg.photo?.length) {
-              tipo = 'imagen';
-              const fileId = msg.photo[msg.photo.length - 1]!.file_id;
-              const fileLink = await bot.getFileLink(fileId);
-              const localPath = './src/main/messages/photo.jpg';
-              await downloadFile(fileLink, localPath);
-              contenido = localPath;
+                tipo = 'imagen';
+                const fileId = msg.photo[msg.photo.length - 1]!.file_id;
+                const fileLink = await bot.getFileLink(fileId);
+                const localPath = './src/main/messages/photo.jpg';
+                await downloadFile(fileLink, localPath);
+                contenido = localPath;
             } else {
-              bot.sendMessage(chatId, 'Solo puedo procesar texto, audio y fotos.');
-              return;
+                bot.sendMessage(chatId, 'Solo puedo procesar texto, audio y fotos.');
+                return;
             }
-        
+
             const datosProcesados = await procesarEntrada(tipo, contenido);
-        
+
             if (!userSessions[chatId]) {
-              userSessions[chatId] = { modoEdicion: false };
+                userSessions[chatId] = { modoEdicion: false };
             }
-        
+
             const currentSession = userSessions[chatId]; 
 
             for (const [clave, valor] of Object.entries(datosProcesados || {})) {
-              if (valor !== null && valor !== undefined && valor !== '') {
-                currentSession[clave as keyof UserSession] = valor;
-              }
+                if (valor !== null && valor !== undefined && valor !== '') {
+                    currentSession[clave as keyof UserSession] = valor;
+                }
             }
-        
+
             const datos = currentSession;
-        
+
             await bot.sendMessage(chatId,
-              `📋 Datos detectados:\n` +
-              `💰 Monto: ${datos.monto ?? '❌ Sin dato'}\n` +
-              `📅 Fecha: ${datos.fecha ?? '❌ Sin dato'}\n` +
-              `📂 Categoría: ${datos.categoria ?? '❌ Sin dato'}\n` +
-              `📝 Descripción: ${datos.descripcion ?? '❌ Sin dato'}\n\n` +
-              `¿Deseás confirmarlos?`,
-              {
-                reply_markup: {
-                  inline_keyboard: [
-                    [
-                      { text: '✅ Confirmar', callback_data: 'confirmar' },
-                      { text: '✏️ Editar', callback_data: 'editar' },
-                      { text: '❌ Cancelar', callback_data: 'cancelar' },
-                    ],
-                  ],
-                },
-              }
+                `📋 Datos detectados:\n` +
+                `💰 Monto: ${datos.monto ?? '❌ Sin dato'}\n` +
+                `📅 Fecha: ${datos.fecha ?? '❌ Sin dato'}\n` +
+                `📂 Categoría: ${datos.categoria ?? '❌ Sin dato'}\n` +
+                `📝 Descripción: ${datos.descripcion ?? '❌ Sin dato'}\n\n` +
+                `¿Deseás confirmarlos?`,
+                {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: '✅ Confirmar', callback_data: 'confirmar' },
+                                { text: '✏️ Editar', callback_data: 'editar' },
+                                { text: '❌ Cancelar', callback_data: 'cancelar' },
+                            ],
+                        ],
+                    },
+                }
             );
         } catch (e) {
             console.error(e);
@@ -200,6 +270,9 @@ async function startBot() {
         }
     });
 
+    // ====================================================================
+    // HANDLER DE CALLBACK QUERIES
+    // ====================================================================
     bot.on('callback_query', async (query) => {
         const chatId = query.message!.chat.id;
         if (!chatId) return;
@@ -224,8 +297,8 @@ async function startBot() {
                 return;
             }
             sessionData.modoEdicion = false;
-            sessionData.estado = undefined; 
-            sessionData.campo = undefined; 
+            sessionData.estado = undefined;
+            sessionData.campo = undefined;
             await guardarDatos(sessionData);
             bot.sendMessage(chatId, '✅ Datos confirmados.');
             delete userSessions[chatId];
@@ -235,35 +308,31 @@ async function startBot() {
             mostrarMenuEdicion(bot, chatId, sessionData);
 
         } else if (data === 'cancelar') {
-   
             sessionData.modoEdicion = false;
-            sessionData.estado = undefined; 
-            sessionData.campo = undefined; 
+            sessionData.estado = undefined;
+            sessionData.campo = undefined;
             await borrarDatos(sessionData);
             bot.sendMessage(chatId, '❌ Operación cancelada.');
             delete userSessions[chatId];
 
         } else if (data.startsWith('editar_')) {
-            const campo = data.replace('editar_', '');
+            const campo = data.replace('editar_', '') as keyof UserSession;
 
-          
-            sessionData.modoEdicion = true; 
+            sessionData.modoEdicion = true;
             sessionData.campo = campo;
 
-          
             if (campo === 'monto') {
-                sessionData.estado = 'esperando_monto'; 
+                sessionData.estado = 'esperando_monto';
+            } else if (campo === 'fecha') {
+                sessionData.estado = 'esperando_fecha';
             } else {
-            
-                sessionData.estado = 'esperando_general'; 
+                sessionData.estado = 'esperando_general';
             }
             
-
             await bot.sendMessage(chatId, `✏️ Ingresá el nuevo valor para *${campo}*:`, {
                 parse_mode: 'Markdown',
-                reply_markup: { force_reply: true }, 
+                reply_markup: { force_reply: true },
             });
-
         }
 
         bot.answerCallbackQuery(query.id);
