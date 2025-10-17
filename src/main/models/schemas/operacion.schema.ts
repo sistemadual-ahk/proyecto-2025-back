@@ -6,9 +6,8 @@ import { TipoOperacion } from '@models/entities/tipoOperacion';
 const operacionSchema = new mongoose.Schema({
   descripcion: {
     type: String,
-    required: true,
+    required: false,
     trim: true,
-    minlength: 3
   },
   monto: {
     type: Number,
