@@ -2,9 +2,12 @@ import TelegramBot from 'node-telegram-bot-api';
 import { procesarEntrada, guardarDatos, borrarDatos } from './api_chatgpt';
 import axios from 'axios';
 import fs from 'fs';
+import { Moderations } from 'openai/resources/moderations';
 
 const token = process.env['TELEGRAM_BOT_TOKEN']!;
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN no está definido');
+
+
 
 async function startBot() {
   const bot = new TelegramBot(token, { polling: true });
@@ -64,6 +67,8 @@ bot.on('message', async (msg) => {
   if (!chatId) return;
 
   // --- Ignorar procesar entrada si está en modo edición
+  console.log("Recibi mensaje")
+  console.log(userSessions[chatId]?.modoEdicion)
   if (userSessions[chatId]?.modoEdicion) {
     return;
   }
@@ -158,7 +163,8 @@ bot.on('callback_query', async (query) => {
       mostrarMenuEdicion(bot, chatId, sessionData);
       return;
     }
-
+     // --- Salir de modo edición cuando se actualiza un campo
+      userSessions[chatId].modoEdicion = false;
     await guardarDatos(sessionData);
     bot.sendMessage(chatId, '✅ Datos confirmados.');
     delete userSessions[chatId];
@@ -169,6 +175,8 @@ bot.on('callback_query', async (query) => {
     mostrarMenuEdicion(bot, chatId, sessionData);
 
   } else if (data === 'cancelar') {
+     // --- Salir de modo edición cuando se actualiza un campo
+    userSessions[chatId].modoEdicion = false;
     await borrarDatos(sessionData);
     bot.sendMessage(chatId, '❌ Operación cancelada.');
     delete userSessions[chatId];
@@ -187,8 +195,7 @@ bot.on('callback_query', async (query) => {
       }
 
       userSessions[chatId][campo] = nuevoValor;
-      // --- Salir de modo edición cuando se actualiza un campo
-      userSessions[chatId].modoEdicion = false;
+     
 
       bot.sendMessage(chatId, `✅ ${campo} actualizado.`);
       mostrarMenuEdicion(bot, chatId, userSessions[chatId]);
