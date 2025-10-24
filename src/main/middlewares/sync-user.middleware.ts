@@ -19,9 +19,7 @@ export const syncUser = async (req: RequestWithAuth, res: Response, next: NextFu
     // Buscar al usuario usando el auth0Id
     let user = await UsuarioModel.findOne({ auth0Id: auth0User.sub });
 
-    if (!user) {
-      return next();
-    }
+    return next();
   }
   catch (error) {
     console.error('Error al sincronizar el usuario:', error);
