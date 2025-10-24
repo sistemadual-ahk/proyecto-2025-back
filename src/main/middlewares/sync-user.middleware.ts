@@ -19,10 +19,9 @@ export const syncUser = async (req: RequestWithAuth, res: Response, next: NextFu
     // Buscar al usuario usando el auth0Id
     let user = await UsuarioModel.findOne({ auth0Id: auth0User.sub });
 
-    /*if (!user) {
-          return next();
+    if (!user) {
+      return next();
     }
-    */
     req.dbUser = user;
     return next();
   }
