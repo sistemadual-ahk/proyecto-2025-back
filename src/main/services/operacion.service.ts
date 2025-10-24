@@ -48,12 +48,8 @@ export class OperacionService {
     // MÉTODOS EXISTENTES
     // ----------------------------------------------------------------------
 
-    async findAll() {
-        const operaciones = await this.operacionRepository.findAll();
-        return operaciones.map(o => this.toDTO(o));
-    }
-
     async findByFilters(filters: {
+        userID?: string;
         tipo?: string;
         categoriaId?: string;
         billeteraId?: string;
@@ -72,16 +68,6 @@ export class OperacionService {
             desde: parsedDesde,
             hasta: parsedHasta
         });
-        return operaciones.map(o => this.toDTO(o));
-    }
-
-    async findAllEgresos() {
-        const operaciones = await this.operacionRepository.findByTipo('Egreso');
-        return operaciones.map(o => this.toDTO(o));
-    }
-
-    async findAllIngresos() {
-        const operaciones = await this.operacionRepository.findByTipo('Ingreso');
         return operaciones.map(o => this.toDTO(o));
     }
 

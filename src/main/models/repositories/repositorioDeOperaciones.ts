@@ -66,6 +66,7 @@ export class RepositorioDeOperaciones {
     }
 
     async findByFilters(filters: {
+        userID?: string;
         tipo?: string;
         categoriaId?: string;
         billeteraId?: string;
