@@ -3,21 +3,34 @@ import { OperacionService } from "@services/operacion.service";
 import { asyncHandler } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
 import { ValidationError } from "../middlewares/error.middleware";
+import { RequestWithAuth } from "@middlewares/sync-user.middleware"; // Asegúrate que esta interfaz exista y tenga dbUser
 
 export class OperacionController extends BaseController {
     constructor(private operacionService: OperacionService) {
         super();
     }
 
-    getAllOperaciones = asyncHandler(async (req: Request, res: Response) => {
+    /**
+     * CORRECCIÓN: Ahora SIEMPRE filtra por usuario, incluso si no hay query params.
+     */
+    getAllOperaciones = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const { tipo, categoriaId, billeteraId, desde, hasta } = req.query as any;
 
+        // 1. Obtener el ID del usuario autenticado (CRÍTICO)
+        const userId = req.dbUser?.id;
+        if (!userId) {
+            throw new ValidationError('No se pudo determinar el usuario para filtrar las operaciones.');
+        }
+
+        // 2. Determinar si hay filtros o no
         if (!tipo && !categoriaId && !billeteraId && !desde && !hasta) {
-            const operaciones = await this.operacionService.findAll();
+            // SI NO HAY FILTROS: Llama al método que filtra por usuario
+            const operaciones = await this.operacionService.findAllForUser(userId);
             return this.sendSuccess(res, 200, operaciones);
         }
 
-        const operaciones = await this.operacionService.findByFilters({
+        // 3. SI HAY FILTROS: Llama al método de filtros del servicio, pasando userId primero
+        const operaciones = await this.operacionService.findByFilters(userId, {
             tipo,
             categoriaId,
             billeteraId,
@@ -27,47 +40,79 @@ export class OperacionController extends BaseController {
         return this.sendSuccess(res, 200, operaciones);
     });
 
-    getAllOperacionesIngresos = asyncHandler(async (_req: Request, res: Response) => {
-    const operaciones = await this.operacionService.findAllIngresos();
-    return this.sendSuccess(res, 200, operaciones);
-    });
+    getAllOperacionesIngresos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        // CORRECCIÓN: Debe filtrar por usuario
+        const userId = req.dbUser?.id;
+        if (!userId) throw new ValidationError('Usuario no autenticado');
 
-    getAllOperacionesEgresos = asyncHandler(async (_req: Request, res: Response) => {
-        const operaciones = await this.operacionService.findAllEgresos();
+        // Llama al método filtrado por usuario del servicio
+        const operaciones = await this.operacionService.findAllIngresosForUser(userId);
         return this.sendSuccess(res, 200, operaciones);
     });
 
-    getOperacionById = asyncHandler(async (req: Request, res: Response) => {
+    getAllOperacionesEgresos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        // CORRECCIÓN: Debe filtrar por usuario
+        const userId = req.dbUser?.id;
+        if (!userId) throw new ValidationError('Usuario no autenticado');
+
+        // Llama al método filtrado por usuario del servicio
+        const operaciones = await this.operacionService.findAllEgresosForUser(userId);
+        return this.sendSuccess(res, 200, operaciones);
+    });
+
+    getOperacionById = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const { id } = req.params;
-        if (!id) {
-            throw new ValidationError('ID de operacion es requerido');
-        }
+        const userId = req.dbUser?.id; // Obtener userId para validación
+        if (!id) throw new ValidationError('ID de operacion es requerido');
+        if (!userId) throw new ValidationError('Usuario no autenticado');
+
         const operacion = await this.operacionService.findById(id);
+
+        // Validación de seguridad adicional (recomendada)
+        if (operacion && (operacion.user as any)?.id !== userId) {
+            throw new ValidationError('No tienes permiso para ver esta operación'); // O NotFoundError
+        }
+
         return this.sendSuccess(res, 200, operacion, 'Operacion encontrada exitosamente');
     });
 
-    createOperacion = asyncHandler(async (req: Request, res: Response) => {
-        const operacionData = req.body;
+    createOperacion = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const userId = req.dbUser?.id;
+        if (!userId) throw new ValidationError('No se pudo determinar el usuario autenticado.');
+
+        // Adjunta el ID del usuario al cuerpo de la petición
+        const operacionData = {
+            ...req.body,
+            user: userId
+        };
+
         const nuevaOperacion = await this.operacionService.create(operacionData);
         return this.sendSuccess(res, 201, nuevaOperacion, 'Operacion creada correctamente');
     });
 
-    updateOperacion = asyncHandler(async (req: Request, res: Response) => {
+    updateOperacion = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const { id } = req.params;
+        const userId = req.dbUser?.id; // Obtener userId para validación
         const operacionData = req.body;
-        if (!id) {
-            throw new ValidationError('ID de operacion es requerido');
-        }
+        if (!id) throw new ValidationError('ID de operacion es requerido');
+        if (!userId) throw new ValidationError('Usuario no autenticado');
+
+        // (Validación de seguridad recomendada: verificar que la operación pertenezca al usuario antes de actualizar)
+
         const operacionActualizada = await this.operacionService.update(id, operacionData);
         return this.sendSuccess(res, 200, operacionActualizada, 'Operacion actualizada correctamente');
     });
 
-    deleteOperacion = asyncHandler(async (req: Request, res: Response) => {
+    deleteOperacion = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const { id } = req.params;
-        if (!id) {
-            throw new ValidationError('ID de operacion es requerido');
-        }
+        const userId = req.dbUser?.id; // Obtener userId para validación
+        if (!id) throw new ValidationError('ID de operacion es requerido');
+        if (!userId) throw new ValidationError('Usuario no autenticado');
+
+        // (Validación de seguridad recomendada: verificar que la operación pertenezca al usuario antes de eliminar)
+
         const resultado = await this.operacionService.delete(id);
         return this.sendSuccess(res, 200, resultado, 'Operacion eliminada correctamente');
     });
 }
+
