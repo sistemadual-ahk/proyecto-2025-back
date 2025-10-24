@@ -39,7 +39,7 @@ export class CategoriaService {
             throw new ValidationError('El nombre de la categoría es requerido');
         }
     
-        const existente = await this.categoriaRepository.findByName(nombre.trim());
+        const existente = await this.categoriaRepository.findByNameAndUser(nombre.trim(), userID);
         if (existente) {
             throw new ConflictError(`Ya existe una categoría con el nombre ${nombre}`);
         }

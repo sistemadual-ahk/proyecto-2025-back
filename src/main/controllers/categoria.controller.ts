@@ -44,16 +44,16 @@ export class CategoriaController extends BaseController {
       return this.sendSuccess(res, 200, categorias);
     });
 
-    createCategoria = asyncHandler(async (req: Request, res: Response) => {
+    createCategoria = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         // userID hay que cambiarlo cando tengamos lo de AUTH 
         // porque recibiriamos a un ID de usuario que luego llamamos
-        const userID = "68dfef090af65bc324c60f97";
+        const userID = req.dbUser?.id;
         const categoriaData = req.body;
         const nuevaCategoria = await this.categoriaService.create(categoriaData, userID);
         return this.sendSuccess(res, 201, nuevaCategoria, 'Categoría creada correctamente');
     });
 
-    updateCategoria = asyncHandler(async (req: Request, res: Response) => {
+    updateCategoria = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const { id } = req.params;
         const categoriaData = req.body;
         if (!id) {
@@ -71,4 +71,4 @@ export class CategoriaController extends BaseController {
         const resultado = await this.categoriaService.delete(id);
         return this.sendSuccess(res, 200, resultado, 'Categoría eliminada correctamente');
     });
-} 
+}
