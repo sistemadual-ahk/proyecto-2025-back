@@ -3,25 +3,25 @@ import { OperacionService } from "@services/operacion.service";
 import { asyncHandler } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
 import { ValidationError } from "../middlewares/error.middleware";
+import { RequestWithAuth } from "@middlewares/sync-user.middleware";
 
-interface RequestWithAuth extends Request {
-    dbUser?: { id: string };
-}
 
 export class OperacionController extends BaseController {
     constructor(private operacionService: OperacionService) {
         super();
     }
 
-    getAllOperaciones = asyncHandler(async (req: Request, res: Response) => {
+    getAllOperaciones = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const { tipo, categoriaId, billeteraId, desde, hasta } = req.query as any;
+        const userID = req.dbUser?.id;
 
         if (!tipo && !categoriaId && !billeteraId && !desde && !hasta) {
-            const operaciones = await this.operacionService.findAll();
+            const operaciones = await this.operacionService.findAllForUser(userID);
             return this.sendSuccess(res, 200, operaciones);
         }
 
         const operaciones = await this.operacionService.findByFilters({
+            userID,
             tipo,
             categoriaId,
             billeteraId,
@@ -31,13 +31,15 @@ export class OperacionController extends BaseController {
         return this.sendSuccess(res, 200, operaciones);
     });
 
-    getAllOperacionesIngresos = asyncHandler(async (_req: Request, res: Response) => {
-    const operaciones = await this.operacionService.findAllIngresos();
+    getAllOperacionesIngresos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+    const userID = req.dbUser?.id;
+    const operaciones = await this.operacionService.findAllIngresosForUser(userID);
     return this.sendSuccess(res, 200, operaciones);
     });
 
-    getAllOperacionesEgresos = asyncHandler(async (_req: Request, res: Response) => {
-        const operaciones = await this.operacionService.findAllEgresos();
+    getAllOperacionesEgresos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const userID = req.dbUser?.id;
+        const operaciones = await this.operacionService.findAllEgresosForUser(userID);
         return this.sendSuccess(res, 200, operaciones);
     });
 
@@ -50,18 +52,8 @@ export class OperacionController extends BaseController {
         return this.sendSuccess(res, 200, operacion, 'Operacion encontrada exitosamente');
     });
 
-    createOperacion = asyncHandler(async (req: RequestWithAuth, res: Response) => {
-        const userId = req.dbUser?.id;
-        if(!userId){
-            // ! Esto debería ser imposible si la ruta está protegida por el middleware de syncUser???
-            throw new ValidationError('No se pudo determinar el usuario autenticado.');
-        }
-        // CREAR EL OBJETO DE DATOS FINAL, INYECTANDO EL ID DEL USUARIO
-        const operacionData = {
-            ...req.body,
-            user: userId
-        };
-
+    createOperacion = asyncHandler(async (req: Request, res: Response) => {
+        const operacionData = req.body;
         const nuevaOperacion = await this.operacionService.create(operacionData);
         return this.sendSuccess(res, 201, nuevaOperacion, 'Operacion creada correctamente');
     });

@@ -48,40 +48,27 @@ export class OperacionService {
     // MÉTODOS EXISTENTES
     // ----------------------------------------------------------------------
 
-    async findAll() {
-        const operaciones = await this.operacionRepository.findAll();
-        return operaciones.map(o => this.toDTO(o));
-    }
-
     async findByFilters(filters: {
+        userID?: string;
         tipo?: string;
         categoriaId?: string;
         billeteraId?: string;
         desde?: string;
         hasta?: string;
     }) {
-        const { tipo, categoriaId, billeteraId, desde, hasta } = filters;
+        const { userID, tipo, categoriaId, billeteraId, desde, hasta } = filters;
 
         const parsedDesde = desde ? new Date(desde) : undefined;
         const parsedHasta = hasta ? new Date(hasta) : undefined;
 
         const operaciones = await this.operacionRepository.findByFilters({
+            userID,
             tipo,
             categoriaId,
             billeteraId,
             desde: parsedDesde,
             hasta: parsedHasta
         });
-        return operaciones.map(o => this.toDTO(o));
-    }
-
-    async findAllEgresos() {
-        const operaciones = await this.operacionRepository.findByTipo('Egreso');
-        return operaciones.map(o => this.toDTO(o));
-    }
-
-    async findAllIngresos() {
-        const operaciones = await this.operacionRepository.findByTipo('Ingreso');
         return operaciones.map(o => this.toDTO(o));
     }
 
