@@ -3,21 +3,25 @@ import { OperacionService } from "@services/operacion.service";
 import { asyncHandler } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
 import { ValidationError } from "../middlewares/error.middleware";
+import { RequestWithAuth } from "@middlewares/sync-user.middleware";
+
 
 export class OperacionController extends BaseController {
     constructor(private operacionService: OperacionService) {
         super();
     }
 
-    getAllOperaciones = asyncHandler(async (req: Request, res: Response) => {
+    getAllOperaciones = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const { tipo, categoriaId, billeteraId, desde, hasta } = req.query as any;
+        const userID = req.dbUser?.id;
 
         if (!tipo && !categoriaId && !billeteraId && !desde && !hasta) {
-            const operaciones = await this.operacionService.findAll();
+            const operaciones = await this.operacionService.findAllForUser(userID);
             return this.sendSuccess(res, 200, operaciones);
         }
 
         const operaciones = await this.operacionService.findByFilters({
+            userID,
             tipo,
             categoriaId,
             billeteraId,
@@ -27,13 +31,15 @@ export class OperacionController extends BaseController {
         return this.sendSuccess(res, 200, operaciones);
     });
 
-    getAllOperacionesIngresos = asyncHandler(async (_req: Request, res: Response) => {
-    const operaciones = await this.operacionService.findAllIngresos();
+    getAllOperacionesIngresos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+    const userID = req.dbUser?.id;
+    const operaciones = await this.operacionService.findAllIngresosForUser(userID);
     return this.sendSuccess(res, 200, operaciones);
     });
 
-    getAllOperacionesEgresos = asyncHandler(async (_req: Request, res: Response) => {
-        const operaciones = await this.operacionService.findAllEgresos();
+    getAllOperacionesEgresos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const userID = req.dbUser?.id;
+        const operaciones = await this.operacionService.findAllEgresosForUser(userID);
         return this.sendSuccess(res, 200, operaciones);
     });
 

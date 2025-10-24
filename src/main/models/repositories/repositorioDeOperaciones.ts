@@ -8,6 +8,39 @@ export class RepositorioDeOperaciones {
         this.model = OperacionModel;
     }
 
+    // ----------------------------------------------------------------------
+    // NUEVOS MÉTODOS DE BÚSQUEDA POR USUARIO
+    // ----------------------------------------------------------------------
+
+    /**
+     * Busca todas las operaciones (Ingreso y Egreso) para un usuario específico.
+     * @param userId El ID del usuario.
+     */
+    async findAllByUserId(userId: string): Promise<Operacion[]> {
+        const operaciones = await this.model.find({ user: userId })
+            .populate('categoria')
+            .populate('billetera')
+            .populate('user');
+        return operaciones as unknown as Operacion[];
+    }
+
+    /**
+     * Busca operaciones por tipo (Ingreso o Egreso) y filtradas por usuario.
+     * @param tipo El tipo de operación ('Ingreso' o 'Egreso').
+     * @param userId El ID del usuario.
+     */
+    async findByTipoAndUserId(tipo: string, userId: string): Promise<Operacion[]> {
+        const operaciones = await this.model.find({ tipo, user: userId })
+            .populate('categoria')
+            .populate('billetera')
+            .populate('user');
+        return operaciones as unknown as Operacion[];
+    }
+
+    // ----------------------------------------------------------------------
+    // MÉTODOS EXISTENTES
+    // ----------------------------------------------------------------------
+
     async findAll(): Promise<Operacion[]> {
         const operaciones = await this.model.find()
             .populate('categoria')
@@ -33,6 +66,7 @@ export class RepositorioDeOperaciones {
     }
 
     async findByFilters(filters: {
+        userID?: string;
         tipo?: string;
         categoriaId?: string;
         billeteraId?: string;
