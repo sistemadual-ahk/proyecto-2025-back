@@ -22,7 +22,7 @@ export const usuarioRepo = new RepositorioDeUsuarios();
 export const categoriaService = new CategoriaService(categoriaRepo, usuarioRepo);
 export const operacionService = new OperacionService(operacionRepo, categoriaRepo, billeteraRepo, usuarioRepo);
 export const billeteraService = new BilleteraService(billeteraRepo, usuarioRepo);
-export const objetivoService = new ObjetivoService(objetivoRepo);
+export const objetivoService = new ObjetivoService(objetivoRepo,usuarioRepo,billeteraRepo,categoriaRepo);
 export const usuarioService = new UsuarioService(usuarioRepo);
 
 // Controladores

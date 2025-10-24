@@ -27,10 +27,6 @@ export class CategoriaController extends BaseController {
     getAllCategoriasForUser = asyncHandler(async (req: RequestWithAuth, res: Response) => {
 //        const userID = "68a773848761e988c438351c";
         const userID = req.dbUser?.id;
-        console.log("UserID en getAllCategoriasForUser:", userID);
-        if (!userID) {
-          throw new ValidationError('ID de usuario no encontrado en la petición');
-        }
         const categorias = await this.categoriaService.findAllForUser(userID);
         return this.sendSuccess(res, 200, categorias);
     });

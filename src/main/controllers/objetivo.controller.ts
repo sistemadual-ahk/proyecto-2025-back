@@ -2,14 +2,16 @@ import { Request, Response } from "express";
 import { ObjetivoService } from "@services/objetivo.service";
 import { asyncHandler, ValidationError } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
+import { RequestWithAuth } from "@middlewares/sync-user.middleware";
 
 export class ObjetivoController extends BaseController {
     constructor(private objetivoService: ObjetivoService) {
         super();
     }
 
-    getAllObjetivos = asyncHandler(async (_req: Request, res: Response) => {
-        const objetivos = await this.objetivoService.findAll();
+    getAllObjetivos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const userID = req.dbUser?.id;
+        const objetivos = await this.objetivoService.findAll(userID);
         return this.sendSuccess(res, 200, objetivos);
     });
 
@@ -20,9 +22,10 @@ export class ObjetivoController extends BaseController {
         return this.sendSuccess(res, 200, objetivo, 'Objetivo encontrado exitosamente');
     });
 
-    createObjetivo = asyncHandler(async (req: Request, res: Response) => {
+    createObjetivo = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const userID = req.dbUser?.id;
         const objetivoData = req.body;
-        const nuevoObjetivo = await this.objetivoService.create(objetivoData);
+        const nuevoObjetivo = await this.objetivoService.create(objetivoData, userID);
         return this.sendSuccess(res, 201, nuevoObjetivo, 'Objetivo creado correctamente');
     });
 
