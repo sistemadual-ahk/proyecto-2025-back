@@ -13,6 +13,8 @@ app.use(cors());
 
 // middleware auth0
 // Aplica checkJwt y syncUser en ese orden
+app.use(checkJwt);
+app.use(syncUser); // Usa el middleware de sincronización después de checkJwt
 // Middleware de log
 app.use((req, _res, next) => {
   console.log(`Método: ${req.method} - URL: ${req.url}`);

@@ -26,7 +26,7 @@ export class BilleteraController extends BaseController {
         const userID = req.dbUser?.id;
         console.log("UserID en getAllBilleterasForUser:", userID);
         if (!userID) {
-          throw new ValidationError('ID de usuario no encontrado en la petición');
+            throw new ValidationError('ID de usuario no encontrado en la petición');
         }
         //req.auth.user.
         const billeteras = await this.billeteraService.findAllForUser(userID);

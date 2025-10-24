@@ -4,6 +4,10 @@ import { asyncHandler } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
 import { ValidationError } from "../middlewares/error.middleware";
 
+interface RequestWithAuth extends Request {
+    dbUser?: { id: string };
+}
+
 export class OperacionController extends BaseController {
     constructor(private operacionService: OperacionService) {
         super();
@@ -46,8 +50,18 @@ export class OperacionController extends BaseController {
         return this.sendSuccess(res, 200, operacion, 'Operacion encontrada exitosamente');
     });
 
-    createOperacion = asyncHandler(async (req: Request, res: Response) => {
-        const operacionData = req.body;
+    createOperacion = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const userId = req.dbUser?.id;
+        if(!userId){
+            // ! Esto debería ser imposible si la ruta está protegida por el middleware de syncUser???
+            throw new ValidationError('No se pudo determinar el usuario autenticado.');
+        }
+        // CREAR EL OBJETO DE DATOS FINAL, INYECTANDO EL ID DEL USUARIO
+        const operacionData = {
+            ...req.body,
+            user: userId
+        };
+
         const nuevaOperacion = await this.operacionService.create(operacionData);
         return this.sendSuccess(res, 201, nuevaOperacion, 'Operacion creada correctamente');
     });
