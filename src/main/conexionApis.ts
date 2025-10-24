@@ -63,6 +63,9 @@ bot.on('message', async (msg) => {
   const chatId = msg.chat?.id;
   if (!chatId) return;
 
+  const user = msg.from;
+  console.log(user);
+
   // --- Ignorar procesar entrada si está en modo edición
   if (userSessions[chatId]?.modoEdicion) {
     return;
@@ -97,9 +100,10 @@ bot.on('message', async (msg) => {
     const datosProcesados = await procesarEntrada(tipo, contenido);
 
     if (!userSessions[chatId]) {
-      // --- Inicializar sesión con modoEdicion false
       userSessions[chatId] = { modoEdicion: false };
     }
+
+    userSessions[chatId].userId = msg.from?.id;
 
     // Actualizar solo campos válidos sin borrar otros datos ni el flag
     for (const [clave, valor] of Object.entries(datosProcesados || {})) {
@@ -149,19 +153,37 @@ bot.on('callback_query', async (query) => {
   }
 
   if (data === 'confirmar') {
-    if (!datosCompletos(sessionData)) {
-      const faltantes = camposFaltantes(sessionData);
-      await bot.sendMessage(chatId,
-        `⚠️ No podés confirmar. Faltan los siguientes datos obligatorios:\n` +
-        faltantes.map(f => `- ${f}`).join('\n')
-      );
-      mostrarMenuEdicion(bot, chatId, sessionData);
+     if (!datosCompletos(sessionData)) {
+    const faltantes = camposFaltantes(sessionData);
+    await bot.sendMessage(chatId,
+      `⚠️ No podés confirmar. Faltan los siguientes datos obligatorios:\n` +
+      faltantes.map(f => `- ${f}`).join('\n')
+    );
+    mostrarMenuEdicion(bot, chatId, sessionData);
+    return;
+  }
+
+  try {
+    const userId = sessionData.userId;
+    const { data: billeteras } = await axios.get(`https://gastify/billeteras/${userId}`);
+
+    if (!billeteras.length) {
+      await bot.sendMessage(chatId, '⚠️ No tenés billeteras registradas.');
       return;
     }
 
-    await guardarDatos(sessionData);
-    bot.sendMessage(chatId, '✅ Datos confirmados.');
-    delete userSessions[chatId];
+    const botones = billeteras.map((b: any) => [
+      { text: b.nombre, callback_data: `billetera_${b._id}` }
+    ]);
+
+    await bot.sendMessage(chatId, '💳 Elegí la billetera para aplicar el gasto:', {
+      reply_markup: { inline_keyboard: botones },
+    });
+
+  } catch (error) {
+    console.error('❌ Error al obtener billeteras:', error);
+    await bot.sendMessage(chatId, '❌ No se pudieron obtener tus billeteras.');
+  }
 
   } else if (data === 'editar') {
     // --- Activar modo edición
@@ -193,6 +215,15 @@ bot.on('callback_query', async (query) => {
       bot.sendMessage(chatId, `✅ ${campo} actualizado.`);
       mostrarMenuEdicion(bot, chatId, userSessions[chatId]);
     });
+  }
+
+  else if (data.startsWith('billetera_')) {
+    const billeteraId = data.replace('billetera_', '');
+    sessionData.billeteraId = billeteraId; // guardamos la billetera elegida
+
+    await guardarDatos(sessionData); // guardar en Mongo o en tu backend
+    await bot.sendMessage(chatId, `✅ Gasto registrado en la billetera seleccionada.`);
+    delete userSessions[chatId];
   }
 
   bot.answerCallbackQuery(query.id);
