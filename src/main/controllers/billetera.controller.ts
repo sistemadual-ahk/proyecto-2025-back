@@ -26,17 +26,17 @@ export class BilleteraController extends BaseController {
         const userID = req.dbUser?.id;
         console.log("UserID en getAllBilleterasForUser:", userID);
         if (!userID) {
-            throw new ValidationError('ID de usuario no encontrado en la petición');
+          throw new ValidationError('ID de usuario no encontrado en la petición');
         }
         //req.auth.user.
         const billeteras = await this.billeteraService.findAllForUser(userID);
         return this.sendSuccess(res, 200, billeteras);
     });
 
-    createBilletera = asyncHandler(async (req: Request, res: Response) => {
+    createBilletera = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         // userID hay que cambiarlo cando tengamos lo de AUTH 
         // porque recibiriamos a un ID de usuario que luego llamamos
-        const userID = "68dfef090af65bc324c60f97";
+        const userID = req.dbUser?.id;
         const billeteraData = req.body;
         const nuevaBilletera = await this.billeteraService.create(billeteraData, userID);
         return this.sendSuccess(res, 201, nuevaBilletera, 'Billetera creada correctamente');
