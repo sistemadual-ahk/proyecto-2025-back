@@ -19,11 +19,18 @@ export const syncUser = async (req: RequestWithAuth, res: Response, next: NextFu
     // Buscar al usuario usando el auth0Id
     let user = await UsuarioModel.findOne({ auth0Id: auth0User.sub });
 
-<<<<<<< HEAD
-      return next();
-=======
+    if (!user) {
+      // Si el usuario no existe, créalo con la información del token
+      user = new UsuarioModel({
+        auth0Id: auth0User.sub,
+        mail: auth0User.email, 
+        name: auth0User.name
+      });
+      await user.save();
+      console.log(`Nuevo usuario sincronizado con ID de Auth0: ${user.auth0Id}`);
+    }
+    req.dbUser = user;
     return next();
->>>>>>> 2ab7771c5f691375dbbf2af6646400f87709e738
   }
   catch (error) {
     console.error('Error al sincronizar el usuario:', error);
