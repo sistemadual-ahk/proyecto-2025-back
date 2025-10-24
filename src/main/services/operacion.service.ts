@@ -56,12 +56,13 @@ export class OperacionService {
         desde?: string;
         hasta?: string;
     }) {
-        const { tipo, categoriaId, billeteraId, desde, hasta } = filters;
+        const { userID, tipo, categoriaId, billeteraId, desde, hasta } = filters;
 
         const parsedDesde = desde ? new Date(desde) : undefined;
         const parsedHasta = hasta ? new Date(hasta) : undefined;
 
         const operaciones = await this.operacionRepository.findByFilters({
+            userID,
             tipo,
             categoriaId,
             billeteraId,
