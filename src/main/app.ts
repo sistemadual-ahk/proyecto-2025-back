@@ -11,6 +11,15 @@ app.set("trust proxy", true);
 app.use(express.json());
 app.use(cors());
 
+// Ruta de salud sin autenticación (debe ir ANTES del middleware de auth)
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Servidor funcionando correctamente',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // middleware auth0
 // Aplica checkJwt y syncUser en ese orden
 app.use(checkJwt);
@@ -22,7 +31,6 @@ app.use((req, _res, next) => {
 });
 
 app.use('/api', checkJwt, syncUser);
-
 
 routes.forEach(route => app.use(route.path, route.handler));
 

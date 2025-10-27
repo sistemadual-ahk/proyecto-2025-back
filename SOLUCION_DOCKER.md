@@ -20,9 +20,11 @@ PORT=3000
 NODE_ENV=development
 MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
 MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
-MONGODB_DB_NAME=main
+MONGODB_DB_NAME=dummy
 CORS_ORIGIN=http://localhost:3000
 LOG_LEVEL=info
+AUTH0_AUDIENCE=https://dev-zztnl4usqwhq2jl2.us.auth0.com/api/v2/
+AUTH0_DOMAIN=dev-zztnl4usqwhq2jl2.us.auth0.com
 ```
 
 ### 3. docker-compose.yml Actualizado
