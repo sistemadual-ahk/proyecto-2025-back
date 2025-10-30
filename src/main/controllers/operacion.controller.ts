@@ -3,18 +3,21 @@ import { OperacionService } from "@services/operacion.service";
 import { asyncHandler } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
 import { ValidationError } from "../middlewares/error.middleware";
-import { RequestWithAuth } from "@middlewares/sync-user.middleware"; // Asegúrate que esta interfaz exista y tenga dbUser
+import { RequestWithAuth } from "@middlewares/sync-user.middleware";
+
 
 export class OperacionController extends BaseController {
     constructor(private operacionService: OperacionService) {
         super();
     }
 
+    getAllOperaciones = asyncHandler(async (req: RequestWithAuth, res: Response) => {
     /**
      * CORRECCIÓN: Ahora SIEMPRE filtra por usuario, incluso si no hay query params.
      */
     getAllOperaciones = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const { tipo, categoriaId, billeteraId, desde, hasta } = req.query as any;
+        const userID = req.dbUser?.id;
 
         // 1. Obtener el ID del usuario autenticado (CRÍTICO)
         const userId = req.dbUser?.id;
@@ -24,13 +27,15 @@ export class OperacionController extends BaseController {
 
         // 2. Determinar si hay filtros o no
         if (!tipo && !categoriaId && !billeteraId && !desde && !hasta) {
+            const operaciones = await this.operacionService.findAllForUser(userID);
             // SI NO HAY FILTROS: Llama al método que filtra por usuario
             const operaciones = await this.operacionService.findAllForUser(userId);
             return this.sendSuccess(res, 200, operaciones);
         }
 
         // 3. SI HAY FILTROS: Llama al método de filtros del servicio, pasando userId primero
-        const operaciones = await this.operacionService.findByFilters(userId, {
+        const operaciones = await this.operacionService.findByFilters({
+            userID,
             tipo,
             categoriaId,
             billeteraId,
@@ -41,22 +46,14 @@ export class OperacionController extends BaseController {
     });
 
     getAllOperacionesIngresos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
-        // CORRECCIÓN: Debe filtrar por usuario
-        const userId = req.dbUser?.id;
-        if (!userId) throw new ValidationError('Usuario no autenticado');
-
-        // Llama al método filtrado por usuario del servicio
-        const operaciones = await this.operacionService.findAllIngresosForUser(userId);
-        return this.sendSuccess(res, 200, operaciones);
+    const userID = req.dbUser?.id;
+    const operaciones = await this.operacionService.findAllIngresosForUser(userID);
+    return this.sendSuccess(res, 200, operaciones);
     });
 
     getAllOperacionesEgresos = asyncHandler(async (req: RequestWithAuth, res: Response) => {
-        // CORRECCIÓN: Debe filtrar por usuario
-        const userId = req.dbUser?.id;
-        if (!userId) throw new ValidationError('Usuario no autenticado');
-
-        // Llama al método filtrado por usuario del servicio
-        const operaciones = await this.operacionService.findAllEgresosForUser(userId);
+        const userID = req.dbUser?.id;
+        const operaciones = await this.operacionService.findAllEgresosForUser(userID);
         return this.sendSuccess(res, 200, operaciones);
     });
 

@@ -18,32 +18,38 @@ export class RepositorioDeOperaciones {
         this.model = OperacionModel;
     }
 
-    // --- MÉTODOS FILTRADOS POR USUARIO (AÑADIDOS) ---
+    // ----------------------------------------------------------------------
+    // NUEVOS MÉTODOS DE BÚSQUEDA POR USUARIO
+    // ----------------------------------------------------------------------
 
     /**
-     * Busca todas las operaciones para un usuario específico.
+     * Busca todas las operaciones (Ingreso y Egreso) para un usuario específico.
+     * @param userId El ID del usuario.
      */
     async findAllByUserId(userId: string): Promise<Operacion[]> {
-        const operaciones = await this.model.find({ user: new mongoose.Types.ObjectId(userId) })
-            .populate('categoria')
-            .populate('billetera')
-            .populate('user'); // Opcional, si quieres los datos del usuario poblados
-        return operaciones as unknown as Operacion[];
-    }
-
-    /**
-     * Busca operaciones por tipo Y usuario específico.
-     */
-    async findByTipoAndUserId(tipo: string, userId: string): Promise<Operacion[]> {
-        const operaciones = await this.model.find({
-            tipo: tipo,
-            user: new mongoose.Types.ObjectId(userId)
-        })
+        const operaciones = await this.model.find({ user: userId })
             .populate('categoria')
             .populate('billetera')
             .populate('user');
         return operaciones as unknown as Operacion[];
     }
+
+    /**
+     * Busca operaciones por tipo (Ingreso o Egreso) y filtradas por usuario.
+     * @param tipo El tipo de operación ('Ingreso' o 'Egreso').
+     * @param userId El ID del usuario.
+     */
+    async findByTipoAndUserId(tipo: string, userId: string): Promise<Operacion[]> {
+        const operaciones = await this.model.find({ tipo, user: userId })
+            .populate('categoria')
+            .populate('billetera')
+            .populate('user');
+        return operaciones as unknown as Operacion[];
+    }
+
+    // ----------------------------------------------------------------------
+    // MÉTODOS EXISTENTES
+    // ----------------------------------------------------------------------
 
     async findAll(): Promise<Operacion[]> {
         const operaciones = await this.model.find()
@@ -69,13 +75,15 @@ export class RepositorioDeOperaciones {
         return operaciones as unknown as Operacion[];
     }
 
-    /**
-    findByFilters recibe userId y lo añade a la query.
-     */
-    async findByFilters(userId: string, filters: OperacionFilters): Promise<Operacion[]> {
-        const query: any = {
-            user: new mongoose.Types.ObjectId(userId)
-        };
+    async findByFilters(filters: {
+        userID?: string;
+        tipo?: string;
+        categoriaId?: string;
+        billeteraId?: string;
+        desde?: Date;
+        hasta?: Date;
+    }): Promise<Operacion[]> {
+        const query: any = {};
 
         if (filters.tipo) {
             query.tipo = filters.tipo;

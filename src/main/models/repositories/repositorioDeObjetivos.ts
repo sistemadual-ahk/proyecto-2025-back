@@ -1,5 +1,6 @@
 import { ObjetivoModel } from "@models/schemas/objetivo.schema";
 import { Objetivo } from '../entities/objetivo';
+import { Types } from 'mongoose';
 
 export class RepositorioDeObjetivos {
     private model: typeof ObjetivoModel;
@@ -8,8 +9,9 @@ export class RepositorioDeObjetivos {
         this.model = ObjetivoModel;
     }
 
-    async findAll(): Promise<Objetivo[]> {
-        const objetivos = await this.model.find().populate('categoria');
+    async findAll(userId: string): Promise<Objetivo[]> {
+        const uid = new Types.ObjectId(userId);
+        const objetivos = await this.model.find({ user: uid }).populate('user', 'name _id');
         return objetivos as unknown as Objetivo[];
     }
 

@@ -23,6 +23,7 @@ type OperacionInputData = {
     fecha?: Date;
 };
 
+
 export class OperacionService {
     constructor(
         private operacionRepository: RepositorioDeOperaciones,
@@ -31,68 +32,51 @@ export class OperacionService {
         private userRepository: RepositorioDeUsuarios
     ) { }
 
-    // --- MÉTODOS FILTRADOS POR USUARIO (Actualizados/Añadidos) ---
+    // ----------------------------------------------------------------------
+    // MÉTODOS FILTRADOS POR USUARIO
+    // ----------------------------------------------------------------------
 
     async findAllForUser(userId: string) {
-        // Llama al método correcto del repositorio
         const operaciones = await this.operacionRepository.findAllByUserId(userId);
         return operaciones.map(o => this.toDTO(o));
     }
 
     async findAllEgresosForUser(userId: string) {
-        // Llama al método correcto del repositorio
         const operaciones = await this.operacionRepository.findByTipoAndUserId('Egreso', userId);
         return operaciones.map(o => this.toDTO(o));
     }
 
     async findAllIngresosForUser(userId: string) {
-        // Llama al método correcto del repositorio
         const operaciones = await this.operacionRepository.findByTipoAndUserId('Ingreso', userId);
         return operaciones.map(o => this.toDTO(o));
     }
 
-    // --- MÉTODOS EXISTENTES (Modificados) ---
+    // ----------------------------------------------------------------------
+    // MÉTODOS EXISTENTES
+    // ----------------------------------------------------------------------
 
-    // Este método ya no es ideal para rutas protegidas
-    async findAll() {
-        const operaciones = await this.operacionRepository.findAll();
-        return operaciones.map(o => this.toDTO(o));
-    }
-
-    /**
-     * CORRECCIÓN: findByFilters ahora recibe userId y lo pasa al repositorio.
-     */
-    async findByFilters(userId: string, filters: { // Ajustamos la firma aquí
+    async findByFilters(filters: {
+        userID?: string;
         tipo?: string;
         categoriaId?: string;
         billeteraId?: string;
         desde?: string; // Recibe string
         hasta?: string;
     }) {
-        const { tipo, categoriaId, billeteraId, desde, hasta } = filters;
+        const { userID, tipo, categoriaId, billeteraId, desde, hasta } = filters;
 
         // Conversión de fechas dentro del servicio
         const parsedDesde = desde ? new Date(desde) : undefined;
         const parsedHasta = hasta ? new Date(hasta) : undefined;
 
-        // Llama al método correcto del repositorio, pasando userId
-        const operaciones = await this.operacionRepository.findByFilters(userId, {
+        const operaciones = await this.operacionRepository.findByFilters({
+            userID,
             tipo,
             categoriaId,
             billeteraId,
             desde: parsedDesde,
             hasta: parsedHasta
         });
-        return operaciones.map(o => this.toDTO(o));
-    }
-
-    // Estos métodos ya no son ideales para rutas protegidas
-    async findAllEgresos() {
-        const operaciones = await this.operacionRepository.findByTipo('Egreso');
-        return operaciones.map(o => this.toDTO(o));
-    }
-    async findAllIngresos() {
-        const operaciones = await this.operacionRepository.findByTipo('Ingreso');
         return operaciones.map(o => this.toDTO(o));
     }
 
@@ -105,9 +89,16 @@ export class OperacionService {
         return this.toDTO(operacion);
     }
 
-    // --- CREATE (Corregido completamente) ---
+    // ----------------------------------------------------------------------
+    // CREATE (CORREGIDO)
+    // ----------------------------------------------------------------------
     async create(operacionData: OperacionInputData) {
         const { descripcion, monto, tipo, fecha, billetera, categoria, user } = operacionData;
+
+        // 1. Validación de campos requeridos (incluye 'user', inyectado por el Controller)
+        if (!monto || !tipo || !user || !billetera || !categoria) {
+            throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
+        }
 
         // Validación básica
         if (!monto || !tipo || !user || !billetera || !categoria) {
@@ -117,32 +108,35 @@ export class OperacionService {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
 
-        // Mapeo de tipo
+        // 2. Traducción y validación del tipo de operación (CRÍTICO)
         let tipoFinal: string;
-        if (tipo.toLowerCase() === 'income') {
+        if (tipo === 'income') {
             tipoFinal = 'Ingreso';
-        } else if (tipo.toLowerCase() === 'expense') {
+        } else if (tipo === 'expense') {
             tipoFinal = 'Egreso';
         } else {
             throw new ValidationError('El tipo de operacion debe ser Ingreso o Egreso');
         }
 
-        // Recuperar entidades relacionadas usando los IDs
-        const billeteraRecuperada = await this.billeteraRepository.findById(billetera);
+        // 3. Verificación de existencia y recuperación de OBJETOS para Mongoose
+        const billeteraRecuperada = await this.billeteraRepository.findById(billetera as string);
         if (!billeteraRecuperada) throw new NotFoundError(`Billetera con ID ${billetera} no encontrada`);
 
-        const categoriaRecuperada = await this.categoriaRepository.findById(categoria);
+        const categoriaRecuperada = await this.categoriaRepository.findById(categoria as string);
         if (!categoriaRecuperada) throw new NotFoundError(`Categoria con ID ${categoria} no encontrada`);
 
+        // Recuperamos el objeto Usuario completo para Mongoose
         const usuarioRecuperado = await this.userRepository.findById(user);
         if (!usuarioRecuperado) throw new NotFoundError(`Usuario con ID ${user} no encontrado`);
 
-        // Crear la nueva entidad Operacion con los OBJETOS recuperados
+        // 4. Creación y asignación de la entidad
         const nuevaOperacion = new Operacion();
         nuevaOperacion.monto = monto;
         nuevaOperacion.descripcion = descripcion;
-        nuevaOperacion.fecha = fecha || new Date(); // Valor por defecto si no viene fecha
-        nuevaOperacion.tipo = tipoFinal as any;
+        nuevaOperacion.fecha = fecha;
+        nuevaOperacion.tipo = tipoFinal as any; // Usamos el valor traducido
+
+        // Asignamos las entidades/objetos recuperados
         nuevaOperacion.billetera = billeteraRecuperada;
         nuevaOperacion.categoria = categoriaRecuperada;
         nuevaOperacion.user = usuarioRecuperado;
@@ -151,7 +145,9 @@ export class OperacionService {
         return this.toDTO(operacionGuardada);
     }
 
-    // --- UPDATE y DELETE (Sin cambios funcionales mayores, pero considerar seguridad userId) ---
+    // ----------------------------------------------------------------------
+    // UPDATE y DELETE 
+    // ----------------------------------------------------------------------
     async update(id: string, operacionData: Partial<Operacion>) {
         // ... (Validaciones y lógica existente, idealmente verificar userId) ...
         const operacionExistente = await this.operacionRepository.findById(id);
@@ -170,7 +166,6 @@ export class OperacionService {
             descripcion: descripcion || operacionExistente.descripcion,
             fecha: fecha || operacionExistente.fecha,
             tipo: tipo || operacionExistente.tipo,
-            // Falta lógica para actualizar billetera/categoría si se permite
         };
 
         const resultado = await this.operacionRepository.save(operacionActualizada);
@@ -190,7 +185,9 @@ export class OperacionService {
         return { success: true, message: 'Operacion eliminada correctamente' };
     }
 
-    // --- DTO MAPPING (Sin cambios) ---
+    // ----------------------------------------------------------------------
+    // DTO MAPPING
+    // ----------------------------------------------------------------------
     private toDTO(operacion: Operacion) {
         // ... (Tu función toDTO existente) ...
         return {
@@ -211,4 +208,3 @@ export class OperacionService {
         };
     }
 }
-

@@ -24,6 +24,12 @@ export class RepositorioDeCategorias {
         return categoria as unknown as Categoria | null;
     }
 
+    async findByNameAndUser(nombre: string, userId: string): Promise<Categoria | null> {
+        const uid = new Types.ObjectId(userId);
+        const categoria = await this.model.findOne({ nombre, user: uid }).populate('user', 'name _id');
+        return categoria as unknown as Categoria | null;
+    }
+
     async findAllByUser(userId: string): Promise<Categoria[]> {
         const uid = new Types.ObjectId(userId);
         const categorias = await this.model.find({ user: uid }).populate('user', 'name _id');
