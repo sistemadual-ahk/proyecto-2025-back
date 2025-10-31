@@ -7,6 +7,7 @@ export class Billetera {
     nombre: string;
     balance: number;
     balanceHistorico: number;
+    isDefault: boolean;
     //tipo: TipoBilletera; De momento no estimado por complejidad en su uso.
     color: string;
     user: Usuario;

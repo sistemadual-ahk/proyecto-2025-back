@@ -13,7 +13,9 @@ export const createBilleteraRoutes = (billeteraController: BilleteraController):
     router.post('/', billeteraController.createBilletera);
     
     router.put('/:id', billeteraController.updateBilletera);
-    
+
+    router.patch('/:id', billeteraController.updateBilleteraDefault);
+
     router.delete('/:id', billeteraController.deleteBilletera);
 
     return router;

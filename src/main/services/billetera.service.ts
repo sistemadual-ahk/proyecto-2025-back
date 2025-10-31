@@ -63,6 +63,29 @@ export class BilleteraService {
         return this.toDTO(resultado);
     }
 
+    async updateDefault(id: string) {
+        const billeteraDefaultNueva = await this.billeteraRepository.findById(id);
+        if (!billeteraDefaultNueva) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
+        
+        const billeteraDefault = await this.billeteraRepository.findDefault();
+        if (!billeteraDefault) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
+
+        const actualizado = {
+            id: id,
+            isDefault: true
+        };
+
+        const defaultViejo = {
+            id: billeteraDefault.id,
+            isDefault: false
+        };
+
+        this.billeteraRepository.save(defaultViejo)
+        const resultado = await this.billeteraRepository.save(actualizado);
+        return this.toDTO(resultado);
+    }
+
+
     async delete(id: string) {
         const deleted = await this.billeteraRepository.deleteById(id);
         if (!deleted) throw new NotFoundError(`Billetera con id ${id} no encontrada`);

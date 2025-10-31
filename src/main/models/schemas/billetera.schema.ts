@@ -32,6 +32,10 @@ const billeteraSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  isDefault: {
+    type: Boolean,
+    default: false
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Usuario',

@@ -47,6 +47,14 @@ export class BilleteraController extends BaseController {
         return this.sendSuccess(res, 200, billeteraActualizada, 'Billetera actualizada correctamente');
     });
 
+    updateBilleteraDefault = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const billeteraData = req.body;
+        if (!id) throw new ValidationError('ID de billetera es requerido');
+        const billeteraActualizada = await this.billeteraService.updateDefault(id);
+        return this.sendSuccess(res, 200, billeteraActualizada, 'Billetera actualizada correctamente');
+    });
+
     deleteBilletera = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         if (!id) throw new ValidationError('ID de billetera es requerido');
