@@ -4,6 +4,8 @@ import { routes } from "@routes/routes";
 import { errorHandler } from "@middlewares/error.middleware";
 import { checkJwt } from "@middlewares/auth.middleware";
 import { syncUser } from "@middlewares/sync-user.middleware"; // Importa el middleware de sincronización
+import { telegramController } from "./config/dependencies";
+
 const cors = require('cors');
 
 const app = express();
@@ -13,8 +15,8 @@ app.use(cors());
 
 // Ruta de salud sin autenticación (debe ir ANTES del middleware de auth)
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     message: 'Servidor funcionando correctamente',
     timestamp: new Date().toISOString()
   });
@@ -33,6 +35,8 @@ app.use((req, _res, next) => {
 app.use('/api', checkJwt, syncUser);
 
 routes.forEach(route => app.use(route.path, route.handler));
+
+telegramController.startBot();
 
 app.use(errorHandler);
 

@@ -9,6 +9,8 @@ import { BilleteraController } from "@controllers/billetera.controller";
 import { ObjetivoController } from "@controllers/objetivo.controller";
 import { UsuarioController } from "@controllers/usuario.controller";
 import { RepositorioDeBilleteras, RepositorioDeObjetivos, RepositorioDeOperaciones, RepositorioDeUsuarios, RepositorioDeCategorias} from "@models/repositories";
+import { OpenAIService } from "@services/external/openai.service";
+import { TelegramController } from "@controllers/telegram.controller";
 
 // Repositorios
 export const categoriaRepo = new RepositorioDeCategorias();
@@ -24,6 +26,7 @@ export const operacionService = new OperacionService(operacionRepo, categoriaRep
 export const billeteraService = new BilleteraService(billeteraRepo, usuarioRepo);
 export const objetivoService = new ObjetivoService(objetivoRepo,usuarioRepo,billeteraRepo,categoriaRepo);
 export const usuarioService = new UsuarioService(usuarioRepo);
+export const openaiService = new OpenAIService(operacionRepo, categoriaService);
 
 // Controladores
 export const categoriaController = new CategoriaController(categoriaService); 
@@ -31,3 +34,4 @@ export const operacionController = new OperacionController(operacionService);
 export const billeteraController = new BilleteraController(billeteraService); 
 export const objetivoController = new ObjetivoController(objetivoService); 
 export const usuarioController = new UsuarioController(usuarioService); 
+export const telegramController = new TelegramController(openaiService, categoriaService, billeteraService, usuarioService);

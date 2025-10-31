@@ -1,13 +1,10 @@
-import 'module-alias/register';
-import { MongoDBClient } from '@config/db';
-import './main/conexionApis'
+import { connectDB } from "./config/db";
+import app from "./main/app";
 
-async function startApp() {
-    console.log("Iniciando conexión a la base de datos...");
-    await MongoDBClient.connect();
-    
-    console.log("Conectando APIs...")
-    
-}
+const PORT = process.env['PORT'] || 3000;
 
-startApp();
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
+  });
+});
