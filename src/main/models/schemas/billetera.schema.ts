@@ -11,8 +11,7 @@ const billeteraSchema = new mongoose.Schema({
   },
   moneda: {
     type: String,
-    enum: Object.values(Moneda),
-    required: true
+    enum: Object.values(Moneda)
   },
   balance: {
     type: Number,

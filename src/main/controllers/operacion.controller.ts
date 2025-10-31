@@ -10,8 +10,6 @@ export class OperacionController extends BaseController {
     constructor(private operacionService: OperacionService) {
         super();
     }
-
-    getAllOperaciones = asyncHandler(async (req: RequestWithAuth, res: Response) => {
     /**
      * CORRECCIÓN: Ahora SIEMPRE filtra por usuario, incluso si no hay query params.
      */
@@ -27,8 +25,6 @@ export class OperacionController extends BaseController {
 
         // 2. Determinar si hay filtros o no
         if (!tipo && !categoriaId && !billeteraId && !desde && !hasta) {
-            const operaciones = await this.operacionService.findAllForUser(userID);
-            // SI NO HAY FILTROS: Llama al método que filtra por usuario
             const operaciones = await this.operacionService.findAllForUser(userId);
             return this.sendSuccess(res, 200, operaciones);
         }
@@ -111,5 +107,6 @@ export class OperacionController extends BaseController {
         const resultado = await this.operacionService.delete(id);
         return this.sendSuccess(res, 200, resultado, 'Operacion eliminada correctamente');
     });
+
 }
 
