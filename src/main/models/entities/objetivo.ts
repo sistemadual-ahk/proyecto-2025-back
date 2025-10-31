@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-
-
-export class Objetivo {
-    id: string;
-    monto: number;
-    titulo: string;
-    categoria: Categoria;
-    fechaInicio: Date;
-    fechaEsperadaFinalizacion: Date;
-    fechaFin: Date;
-}
-=======
 import { Moneda } from "./moneda";
 
 export class Objetivo {
@@ -24,4 +11,3 @@ export class Objetivo {
     usuarioId: string;
     activo: boolean;
 }
->>>>>>> d2d049119bef094318f8a85a42c553a22bc882d8
