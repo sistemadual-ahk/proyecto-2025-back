@@ -6,6 +6,7 @@ export const createUsuarioRoutes = (usuarioController: UsuarioController): Route
 
     router.get('/', usuarioController.getAllUsuarios);
     router.get('/:id', usuarioController.getUsuarioById);
+    router.get('/:telegramId', usuarioController.getUsuarioByTelegramId)
     router.post('/', usuarioController.createUsuario);
     router.put('/:id', usuarioController.updateUsuario);
     router.delete('/:id', usuarioController.deleteUsuario);

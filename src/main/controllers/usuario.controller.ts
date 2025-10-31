@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { UsuarioService } from "@services/usuario.service";
 import { asyncHandler, ValidationError } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
+import { RequestWithAuth } from "@middlewares/sync-user.middleware";
 
 export class UsuarioController extends BaseController {
     constructor(private usuarioService: UsuarioService) {
@@ -17,6 +18,13 @@ export class UsuarioController extends BaseController {
         const { id } = req.params;
         if (!id) throw new ValidationError('ID de usuario es requerido');
         const usuario = await this.usuarioService.findById(id);
+        return this.sendSuccess(res, 200, usuario, 'Usuario encontrado exitosamente');
+    });
+
+    getUsuarioByTelegramId = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        if (!id) throw new ValidationError('ID de usuario es requerido');
+        const usuario = await this.usuarioService.findByTelegramId(id);
         return this.sendSuccess(res, 200, usuario, 'Usuario encontrado exitosamente');
     });
 
