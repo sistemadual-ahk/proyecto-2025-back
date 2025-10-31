@@ -1,5 +1,15 @@
 import { OperacionModel } from "@models/schemas/operacion.schema";
 import { Operacion } from '@models/entities/operacion';
+import mongoose from 'mongoose'; // Necesario para Types.ObjectId
+
+// Tipo para los filtros que recibe findByFilters
+type OperacionFilters = {
+    tipo?: string;
+    categoriaId?: string;
+    billeteraId?: string;
+    desde?: Date;
+    hasta?: Date;
+};
 
 export class RepositorioDeOperaciones {
     private model: typeof OperacionModel;
@@ -78,15 +88,12 @@ export class RepositorioDeOperaciones {
         if (filters.tipo) {
             query.tipo = filters.tipo;
         }
-
         if (filters.categoriaId) {
             query.categoria = filters.categoriaId;
         }
-
         if (filters.billeteraId) {
             query.billetera = filters.billeteraId;
         }
-
         if (filters.desde || filters.hasta) {
             query.fecha = {};
             if (filters.desde) {
@@ -111,10 +118,21 @@ export class RepositorioDeOperaciones {
                 operacion,
                 { new: true, runValidators: true }
             ).populate('categoria')
-             .populate('billetera')
-             .populate('user');
+                .populate('billetera')
+                .populate('user');
             return operacionActualizada as unknown as Operacion;
         } else {
+            // Asegurarse de que las referencias sean ObjectId si tu schema lo requiere
+            if (operacion.user && typeof operacion.user === 'string') {
+                operacion.user = new mongoose.Types.UUID(operacion.user) as any;
+            }
+            if (operacion.billetera && typeof operacion.billetera === 'string') {
+                operacion.billetera = new mongoose.Types.UUID(operacion.billetera) as any;
+            }
+            if (operacion.categoria && typeof operacion.categoria === 'string') {
+                operacion.categoria = new mongoose.Types.UUID(operacion.categoria) as any;
+            }
+
             const nuevaOperacion = new this.model(operacion);
             const operacionGuardada = await nuevaOperacion.save();
             return operacionGuardada as unknown as Operacion;

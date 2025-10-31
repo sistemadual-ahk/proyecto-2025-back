@@ -26,9 +26,9 @@ export class BilleteraService {
     }
 
     async create(billeteraData: Partial<Billetera>, userID: string) {
-        const { nombre, moneda, balance, balanceHistorico } = billeteraData;
+        const { nombre, balance, balanceHistorico } = billeteraData;
 
-        if (!nombre || !moneda) throw new ValidationError('Nombre, moneda y usuario son requeridos');
+        if (!nombre) throw new ValidationError('Nombre y usuario son requeridos');
         const userRecuperado = await this.userRepository.findById(userID);
         if (!userRecuperado) throw new NotFoundError(`Usuario con ${userID} no encontrado`);
         const existente = await this.billeteraRepository.findByNameAndUser(nombre.trim(), userID);
@@ -36,7 +36,6 @@ export class BilleteraService {
 
         const nuevaBilletera = new Billetera();
         nuevaBilletera.nombre = nombre.trim();
-        nuevaBilletera.moneda = moneda;
         nuevaBilletera.balance = balance || 0;
         nuevaBilletera.balanceHistorico = balanceHistorico || 0;
         nuevaBilletera.user = userRecuperado;
@@ -50,12 +49,11 @@ export class BilleteraService {
         const billeteraExistente = await this.billeteraRepository.findById(id);
         if (!billeteraExistente) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
 
-        const { nombre, moneda, balance, balanceHistorico, color } = billeteraData;
+        const { nombre, balance, balanceHistorico, color } = billeteraData;
 
         const actualizado = {
             id: id,
             nombre: nombre?.trim() || billeteraExistente.nombre,
-            moneda: moneda || billeteraExistente.moneda,
             color: color || billeteraExistente.color,
             balance: balance || billeteraExistente.balance,
             balanceHistorico: balanceHistorico || billeteraExistente.balanceHistorico
@@ -75,7 +73,6 @@ export class BilleteraService {
         return {
             id: billetera.id || (billetera as any)._id,
             nombre: billetera.nombre,
-            moneda: billetera.moneda,
             balance: billetera.balance,
             balanceHistorico: billetera.balanceHistorico,
             color: billetera.color,

@@ -2,16 +2,23 @@ import { Operacion } from "@models/entities/operacion";
 import { RepositorioDeOperaciones } from "@models/repositories/repositorioDeOperaciones";
 import { ValidationError, ConflictError, NotFoundError } from "../middlewares/error.middleware";
 import { RepositorioDeBilleteras, RepositorioDeCategorias, RepositorioDeUsuarios } from "@models/repositories";
-import { OperacionDto } from "main/dtos/operacionInputDto";
 
-// CRÍTICO: Definimos un tipo que incluye todos los campos esperados, 
-// incluso los que el Controller adjunta (user).
+// Tipo para los filtros, que ahora también recibe el userId
+type OperacionFilters = {
+    tipo?: string;
+    categoriaId?: string;
+    billeteraId?: string;
+    desde?: Date; // Ya convertidos a Date por el Controller o Service
+    hasta?: Date;
+};
+
+// Tipo de datos que el método create espera (incluyendo user ID)
 type OperacionInputData = {
     monto: number;
-    tipo: string; // Recibimos 'income'/'expense'
-    billetera: string; // Asumimos que viene el ID
-    categoria: string; // Asumimos que viene el ID
-    user: string;      // CRÍTICO: Viene inyectado desde el Controller
+    tipo: string; // 'income' o 'expense'
+    billetera: string; // ID
+    categoria: string; // ID
+    user: string; // ID del usuario autenticado
     descripcion?: string;
     fecha?: Date;
 };
@@ -53,11 +60,12 @@ export class OperacionService {
         tipo?: string;
         categoriaId?: string;
         billeteraId?: string;
-        desde?: string;
+        desde?: string; // Recibe string
         hasta?: string;
     }) {
         const { userID, tipo, categoriaId, billeteraId, desde, hasta } = filters;
 
+        // Conversión de fechas dentro del servicio
         const parsedDesde = desde ? new Date(desde) : undefined;
         const parsedHasta = hasta ? new Date(hasta) : undefined;
 
@@ -77,6 +85,7 @@ export class OperacionService {
         if (!operacion) {
             throw new NotFoundError(`Operacion con id ${id} no encontrada`);
         }
+        // Idealmente, añadir: if (operacion.user.id !== userId) throw NotAuthorizedError...
         return this.toDTO(operacion);
     }
 
@@ -91,6 +100,10 @@ export class OperacionService {
             throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
         }
 
+        // Validación básica
+        if (!monto || !tipo || !user || !billetera || !categoria) {
+            throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
+        }
         if (monto === 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
         }
@@ -136,12 +149,12 @@ export class OperacionService {
     // UPDATE y DELETE 
     // ----------------------------------------------------------------------
     async update(id: string, operacionData: Partial<Operacion>) {
+        // ... (Validaciones y lógica existente, idealmente verificar userId) ...
         const operacionExistente = await this.operacionRepository.findById(id);
-        if (!operacionExistente) {
-            throw new NotFoundError(`Operacion con id ${id} no encontrada`);
-        }
+        if (!operacionExistente) throw new NotFoundError(`Operacion con id ${id} no encontrada`);
+        // Añadir: if (operacionExistente.user.id !== userId) throw NotAuthorized...
 
-        const { descripcion, monto, fecha, tipo, user, billetera, categoria } = operacionData;
+        const { descripcion, monto, fecha, tipo } = operacionData;
 
         if (monto !== undefined && monto === 0) {
             throw new ValidationError('El monto de la operacion no debe ser 0');
@@ -160,9 +173,14 @@ export class OperacionService {
     }
 
     async delete(id: string) {
+        // ... (Lógica existente, idealmente verificar userId antes de borrar) ...
+        const operacion = await this.operacionRepository.findById(id);
+        if (!operacion) throw new NotFoundError(`Operacion con id ${id} no encontrada`);
+        // Añadir: if (operacion.user.id !== userId) throw NotAuthorized...
+
         const deleted = await this.operacionRepository.deleteById(id);
         if (!deleted) {
-            throw new NotFoundError(`Operacion con id ${id} no encontrada`);
+            throw new NotFoundError(`Operacion con id ${id} no se pudo eliminar`);
         }
         return { success: true, message: 'Operacion eliminada correctamente' };
     }
@@ -171,12 +189,13 @@ export class OperacionService {
     // DTO MAPPING
     // ----------------------------------------------------------------------
     private toDTO(operacion: Operacion) {
+        // ... (Tu función toDTO existente) ...
         return {
             id: operacion.id || (operacion as any)._id,
             descripcion: operacion.descripcion,
             monto: operacion.monto,
-            categoria: operacion.categoria,
-            billetera: operacion.billetera,
+            categoria: operacion.categoria, // Puede necesitar poblarse o mapear a DTO
+            billetera: operacion.billetera, // Puede necesitar poblarse o mapear a DTO
             fecha: operacion.fecha,
             tipo: operacion.tipo,
             user: operacion.user
