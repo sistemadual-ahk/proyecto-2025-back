@@ -16,6 +16,12 @@ export class UsuarioService {
         return this.toDTO(usuario);
     }
 
+    async findByTelegramId(telegramId: string) {
+        const usuario = await this.usuarioRepository.findByTelegramId(telegramId);
+        if (!usuario) throw new NotFoundError(`Usuario con id ${telegramId} no encontrado`);
+        return this.toDTO(usuario);
+    }
+
     async create(usuarioData: Partial<Usuario>) {
         const { name, mail, auth0Id } = usuarioData;
         if (!name || !mail || !auth0Id ) throw new ValidationError('Todos los campos son requeridos');
@@ -64,10 +70,11 @@ export class UsuarioService {
     private toDTO(usuario: Usuario) {
         return {
             id: usuario.id || (usuario as any)._id,
+            authId: usuario.auth0Id,
+            telegramId: usuario.telegramId, 
             name: usuario.name,
             mail: usuario.mail,
-            phoneNumber: usuario.phoneNumber,
-            password: usuario.password,
+            phoneNumber: usuario.phoneNumber
         };
     }
 }

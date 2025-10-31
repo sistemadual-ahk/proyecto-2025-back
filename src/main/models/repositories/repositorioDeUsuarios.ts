@@ -19,6 +19,11 @@ RepositorioDeUsuarios {
         return usuario as unknown as Usuario | null;
     }
 
+    async findByTelegramId(telegramId: string): Promise<Usuario | null> {
+        const usuario = await this.model.findOne({ telegramId });
+        return usuario as unknown as Usuario | null;
+    }
+
     async findByEmail(mail: string): Promise<Usuario | null> {
         const usuario = await this.model.findOne({ mail });
         return usuario as unknown as Usuario | null;

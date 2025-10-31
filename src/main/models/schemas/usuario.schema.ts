@@ -7,6 +7,11 @@ const usuarioSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  telegramId:{
+    type: String,
+    required: false,
+    unique: true
+  },
   name: {
     type: String,
     required: false,
