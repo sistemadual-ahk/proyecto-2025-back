@@ -4,15 +4,12 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "3001:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
-      - MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
-      - MONGODB_DB_NAME=main
-      - CORS_ORIGIN=http://localhost:3000
-      - LOG_LEVEL=info
     restart: unless-stopped
     networks:
       - app-network
@@ -23,15 +20,13 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "3001:3000"
+      - "3002:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
-      - MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
-      - MONGODB_DB_NAME=main
-      - CORS_ORIGIN=http://localhost:3000
-      - LOG_LEVEL=info
+      - MONGODB_DB_NAME=dummy
     volumes:
       - ./src:/app/src
       - ./package.json:/app/package.json

@@ -64,6 +64,10 @@ CORS_ORIGIN=http://localhost:3000
 # Configuración de logs
 LOG_LEVEL=info
 
+# Para auth0
+AUTH0_AUDIENCE=https://dev-zztnl4usqwhq2jl2.us.auth0.com/api/v2/
+AUTH0_DOMAIN=dev-zztnl4usqwhq2jl2.us.auth0.com
+
 # Para MongoDB local en Docker (alternativa)
 # MONGODB_URI=mongodb://admin:password123@mongo:27017/proyecto-2025?authSource=admin
 ```
