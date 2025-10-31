@@ -1,6 +1,6 @@
 
 export enum Moneda {
-    DOLAR_USA,
-    PESO_ARG,
-    REALES
+  DOLAR_USA = "USD",
+  PESO_ARG = "ARS",
+  REALES = "BRL"
 }
