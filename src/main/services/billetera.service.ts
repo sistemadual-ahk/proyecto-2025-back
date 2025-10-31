@@ -4,7 +4,7 @@ import { ValidationError, NotFoundError, ConflictError } from "../middlewares/er
 import { RepositorioDeUsuarios } from "@models/repositories";
 
 export class BilleteraService {
-    constructor(private billeteraRepository: RepositorioDeBilleteras, private userRepository: RepositorioDeUsuarios) {}
+    constructor(private billeteraRepository: RepositorioDeBilleteras, private userRepository: RepositorioDeUsuarios) { }
 
     async findAll() {
         const billeteras = await this.billeteraRepository.findAll();
@@ -12,12 +12,12 @@ export class BilleteraService {
     }
 
     async findAllForUser(userId?: string) {
-            if (!userId) {
-                throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
-            }
-            const billeteras = await this.billeteraRepository.findAllForUser(userId);
-            return billeteras.map(c => this.toDTO(c));
+        if (!userId) {
+            throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
         }
+        const billeteras = await this.billeteraRepository.findAllForUser(userId);
+        return billeteras.map(c => this.toDTO(c));
+    }
 
     async findById(id: string) {
         const billetera = await this.billeteraRepository.findById(id);
@@ -66,7 +66,7 @@ export class BilleteraService {
     async updateDefault(id: string) {
         const billeteraDefaultNueva = await this.billeteraRepository.findById(id);
         if (!billeteraDefaultNueva) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
-        
+
         const billeteraDefault = await this.billeteraRepository.findDefault();
         if (!billeteraDefault) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
 
@@ -85,7 +85,6 @@ export class BilleteraService {
         return this.toDTO(resultado);
     }
 
-
     async delete(id: string) {
         const deleted = await this.billeteraRepository.deleteById(id);
         if (!deleted) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
@@ -99,7 +98,8 @@ export class BilleteraService {
             balance: billetera.balance,
             balanceHistorico: billetera.balanceHistorico,
             color: billetera.color,
-            user: billetera.user.id
+            user: billetera.user.id,
+            isDefault: billetera.isDefault
         };
     }
 }
