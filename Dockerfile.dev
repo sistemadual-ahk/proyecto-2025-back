@@ -22,5 +22,5 @@ EXPOSE 3000
 ENV NODE_ENV=development
 ENV PORT=3000
 
-# Comando para ejecutar la aplicación en modo desarrollo
-CMD ["npm", "start"] 
+# Comando para ejecutar la aplicación en modo desarrollo con hot reload
+CMD ["npm", "run", "dev"] 

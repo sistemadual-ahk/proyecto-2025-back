@@ -38,12 +38,14 @@ services:
       - ./package.json:/app/package.json
     restart: unless-stopped
     networks:
-      - web
+      - app-network
     ports:
       - "3002:3000"
     profiles:
       - dev
 
 networks:
+  app-network:
+      driver: bridge
   web:
     external: true
