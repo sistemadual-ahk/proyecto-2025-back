@@ -1,6 +1,7 @@
 import { BilleteraModel } from '../schemas/billetera.schema';
 import { Billetera } from '../entities/billetera';
 import { Types } from 'mongoose';
+import { equal } from 'assert';
 
 export class RepositorioDeBilleteras {
     private model: typeof BilleteraModel;
@@ -29,6 +30,11 @@ export class RepositorioDeBilleteras {
     async findByNameAndUser(nombre: string, userId: string): Promise<Billetera | null> {
         const uid = new Types.ObjectId(userId);
         const billetera = await this.model.findOne({ nombre, user: uid }).populate('user', 'name _id');
+        return billetera as unknown as Billetera | null;
+    }
+
+    async findDefault(): Promise<Billetera | null> {
+        const billetera = await this.model.findOne({ isDefault : true });
         return billetera as unknown as Billetera | null;
     }
 

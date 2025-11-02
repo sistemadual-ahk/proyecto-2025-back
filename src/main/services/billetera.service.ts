@@ -4,7 +4,7 @@ import { ValidationError, NotFoundError, ConflictError } from "../middlewares/er
 import { RepositorioDeUsuarios } from "@models/repositories";
 
 export class BilleteraService {
-    constructor(private billeteraRepository: RepositorioDeBilleteras, private userRepository: RepositorioDeUsuarios) {}
+    constructor(private billeteraRepository: RepositorioDeBilleteras, private userRepository: RepositorioDeUsuarios) { }
 
     async findAll() {
         const billeteras = await this.billeteraRepository.findAll();
@@ -12,12 +12,12 @@ export class BilleteraService {
     }
 
     async findAllForUser(userId?: string) {
-            if (!userId) {
-                throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
-            }
-            const billeteras = await this.billeteraRepository.findAllForUser(userId);
-            return billeteras.map(c => this.toDTO(c));
+        if (!userId) {
+            throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
         }
+        const billeteras = await this.billeteraRepository.findAllForUser(userId);
+        return billeteras.map(c => this.toDTO(c));
+    }
 
     async findById(id: string) {
         const billetera = await this.billeteraRepository.findById(id);
@@ -26,9 +26,9 @@ export class BilleteraService {
     }
 
     async create(billeteraData: Partial<Billetera>, userID: string) {
-        const { nombre, moneda, balance, balanceHistorico } = billeteraData;
+        const { nombre, balance, balanceHistorico } = billeteraData;
 
-        if (!nombre || !moneda) throw new ValidationError('Nombre, moneda y usuario son requeridos');
+        if (!nombre) throw new ValidationError('Nombre y usuario son requeridos');
         const userRecuperado = await this.userRepository.findById(userID);
         if (!userRecuperado) throw new NotFoundError(`Usuario con ${userID} no encontrado`);
         const existente = await this.billeteraRepository.findByNameAndUser(nombre.trim(), userID);
@@ -36,7 +36,6 @@ export class BilleteraService {
 
         const nuevaBilletera = new Billetera();
         nuevaBilletera.nombre = nombre.trim();
-        nuevaBilletera.moneda = moneda;
         nuevaBilletera.balance = balance || 0;
         nuevaBilletera.balanceHistorico = balanceHistorico || 0;
         nuevaBilletera.user = userRecuperado;
@@ -50,17 +49,38 @@ export class BilleteraService {
         const billeteraExistente = await this.billeteraRepository.findById(id);
         if (!billeteraExistente) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
 
-        const { nombre, moneda, balance, balanceHistorico, color } = billeteraData;
+        const { nombre, balance, balanceHistorico, color } = billeteraData;
 
         const actualizado = {
             id: id,
             nombre: nombre?.trim() || billeteraExistente.nombre,
-            moneda: moneda || billeteraExistente.moneda,
             color: color || billeteraExistente.color,
             balance: balance || billeteraExistente.balance,
             balanceHistorico: balanceHistorico || billeteraExistente.balanceHistorico
         };
 
+        const resultado = await this.billeteraRepository.save(actualizado);
+        return this.toDTO(resultado);
+    }
+
+    async updateDefault(id: string) {
+        const billeteraDefaultNueva = await this.billeteraRepository.findById(id);
+        if (!billeteraDefaultNueva) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
+
+        const billeteraDefault = await this.billeteraRepository.findDefault();
+        if (!billeteraDefault) throw new NotFoundError(`Billetera con id ${id} no encontrada`);
+
+        const actualizado = {
+            id: id,
+            isDefault: true
+        };
+
+        const defaultViejo = {
+            id: billeteraDefault.id,
+            isDefault: false
+        };
+
+        this.billeteraRepository.save(defaultViejo)
         const resultado = await this.billeteraRepository.save(actualizado);
         return this.toDTO(resultado);
     }
@@ -75,11 +95,11 @@ export class BilleteraService {
         return {
             id: billetera.id || (billetera as any)._id,
             nombre: billetera.nombre,
-            moneda: billetera.moneda,
             balance: billetera.balance,
             balanceHistorico: billetera.balanceHistorico,
             color: billetera.color,
-            user: billetera.user.id
+            user: billetera.user.id,
+            isDefault: billetera.isDefault
         };
     }
 }

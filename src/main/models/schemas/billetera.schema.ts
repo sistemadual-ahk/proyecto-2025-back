@@ -11,8 +11,7 @@ const billeteraSchema = new mongoose.Schema({
   },
   moneda: {
     type: String,
-    enum: Object.values(Moneda),
-    required: true
+    enum: Object.values(Moneda)
   },
   balance: {
     type: Number,
@@ -32,6 +31,10 @@ const billeteraSchema = new mongoose.Schema({
   color: {
     type: String,
     default: ''
+  },
+  isDefault: {
+    type: Boolean,
+    default: false
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
