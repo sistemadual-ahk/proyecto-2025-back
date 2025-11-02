@@ -132,15 +132,14 @@ Responde ÚNICAMENTE con un JSON válido: {"monto": NUMERO, "fecha": "DD-MM-YYYY
 
   public async borrarDatos(operacion: Partial<Operacion>): Promise<void> {
     try {
-      /*await OperacionModel.deleteOne({
-        monto: operacion.monto,
-        fecha: operacion.fecha,
-        descripcion: operacion.descripcion,
-      });*/
-      console.log('🗑️ Datos eliminados');
+      if (!operacion.id) {
+      throw new Error('❌ No se proporcionó el ID de la operación a eliminar');
+      }
+
+    await this.operacionRepo.deleteById(String(operacion.id));
+    console.log('🗑️ Datos eliminados');
     } catch (error) {
       console.error('❌ Error al borrar datos:', error);
     }
   }
 }
-
