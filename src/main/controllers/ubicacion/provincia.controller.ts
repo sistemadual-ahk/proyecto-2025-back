@@ -10,6 +10,6 @@ export class ProvinciaController extends BaseController {
 
     getAllProvincias = asyncHandler(async (_req: Request, res: Response) => {
         const provincias = await this.provinciaService.findAll();
-        return this.sendSuccess(res, 200, provincias);
+        return this.sendSuccess(res, 200, provincias, "Provincias obtenidas correctametne");
     });
 }

@@ -9,7 +9,7 @@ export class RepositorioDeProvincias {
     }
 
     async findAll(): Promise<Provincia[]> {
-        const provincias = await this.model.find();
+        const provincias = await this.model.find({}, { _id: 0, __v: 0 }); // Projection: sin id ni version
         return provincias as unknown as Provincia[];
     }
 }

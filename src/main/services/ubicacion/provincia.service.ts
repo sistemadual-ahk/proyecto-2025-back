@@ -6,20 +6,19 @@ export class ProvinciaService {
     constructor(private provinciaRepository: RepositorioDeProvincias) {}
 
     async findAll() {
-        const provincia = await this.provinciaRepository.findAll();
-        return provincia.map((p) => this.toDTO(p));
+        const provincias = await this.provinciaRepository.findAll();
+        return provincias.map((p) => this.toDTO(p));
     }
 
-    // TODO
     private toDTO(provincia: Provincia) {
         // no id requested
         return {
             nombre: provincia.nombre,
             poblacion: provincia.poblacion,
-            municipios: provincia.municipios?.map((mun) => ({
-                nombre: mun.nombre,
-                localidades: mun.localidades?.map((loc) => ({
-                    nombre: loc.nombre,
+            municipios: provincia.municipios?.map((municipio) => ({
+                nombre: municipio.nombre,
+                localidades: municipio.localidades?.map((localidad) => ({
+                    nombre: localidad.nombre,
                 })),
             })),
         };

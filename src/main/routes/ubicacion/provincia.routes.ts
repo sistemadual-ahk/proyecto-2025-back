@@ -5,6 +5,7 @@ export const createProvinciaRoutes = (ubicacionController: ProvinciaController):
     const router = Router();
 
     router.get("/all", ubicacionController.getAllProvincias);
+    router.get("/", ubicacionController.getAllProvincias);
 
     return router;
 };
