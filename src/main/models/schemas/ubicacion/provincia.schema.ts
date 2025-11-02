@@ -30,4 +30,4 @@ const provinciaSchema = new mongoose.Schema({
 
 provinciaSchema.loadClass(Provincia);
 
-export const ProvinciaModel = mongoose.model("Ubicacion", provinciaSchema);
+export const ProvinciaModel = mongoose.model("provincias", provinciaSchema);
