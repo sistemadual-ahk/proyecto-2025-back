@@ -8,7 +8,6 @@ import { CategoriaService } from '@services/categoria.service';
 import { TipoOperacion } from '@models/entities/tipoOperacion';
 import { BilleteraService } from '@services/billetera.service';
 import { UsuarioService } from '@services/usuario.service';
-import { categoriaService } from 'main/config/dependencies'; // Asumo que esto es correcto
 import { CategoriaDto } from '../dtos/categoriaDto';
 
 interface UserSession {
@@ -20,8 +19,8 @@ interface UserSession {
     categoria?: string; 
     descripcion?: string;
     telefono?: string;
-    originalMessageId?: number; // ID del mensaje inicial con los 3 botones (el que debe ser borrado y reemplazado al editar)
-}
+    originalMessageId?: number; 
+    }
 
 const token = process.env['TELEGRAM_BOT_TOKEN']!;
 const userSessions: Record<number, UserSession> = {};
@@ -32,8 +31,6 @@ export class TelegramController extends BaseController {
         super();
     }
     
-    // --- HELPERS DE FORMATO Y VALIDACIÓN ---
-
     private getDatosMensaje(datos: UserSession, titulo: string, incluirBotones: boolean = false): { text: string, reply_markup?: any } {
         const text = `${titulo}\n\n` +
             `💰 Monto: ${datos.monto ?? '❌ Sin dato'}\n` +
@@ -176,7 +173,7 @@ export class TelegramController extends BaseController {
                             { text: '📝 Descripción', callback_data: 'editar_descripcion' },
                         ],
                         [
-                            // Este botón CONFIRMA los cambios hechos en el menú de edición y REEMPLAZA el mensaje original
+                           
                             { text: '✅ Confirmar Cambios', callback_data: 'confirmar_edicion' }, 
                             { text: '❌ Cancelar Edición', callback_data: 'cancelar_edicion' },
                         ],
@@ -202,17 +199,15 @@ export class TelegramController extends BaseController {
                     }
                 });
 
-                userSessions[chatId].estado = 'esperando_categoria'; 
-                userSessions[chatId].campo = 'categoria';
+                userSessions[chatId]!.estado = 'esperando_categoria'; 
+                userSessions[chatId]!.campo = 'categoria';
 
             } catch (e) {
                 console.error("Error al obtener categorías:", e);
                 await bot.sendMessage(chatId, "❌ Hubo un error al cargar las categorías.");
-                mostrarMenuEdicion(bot, chatId, userSessions[chatId]); 
+                mostrarMenuEdicion(bot, chatId, userSessions[chatId]!); 
             }
         };
-
-        // --- Manejadores de Validación (Mantienen estado de espera si falla) ---
 
         const manejarValidacionMonto = async (chatId: number, nuevoValor: string, session: UserSession) => {
             const montoNumerico = this.chequearMontoDesdeMensaje(nuevoValor);
@@ -252,9 +247,6 @@ export class TelegramController extends BaseController {
             mostrarMenuEdicion(bot, chatId, session);
         };
 
-
-        // --- Manejador de Mensajes (Creación del Borrador Inicial) ---
-
         bot.on('message', async (msg) => {
             const chatId = msg.chat?.id;
             if (!chatId) return;
@@ -262,7 +254,6 @@ export class TelegramController extends BaseController {
             const session = userSessions[chatId];
             const nuevoValor = msg.text || '';
 
-            // Manejar validación de monto/fecha/descripción
             if (session?.estado === 'esperando_monto') {
                 await manejarValidacionMonto(chatId, nuevoValor, session);
                 return;
@@ -280,9 +271,6 @@ export class TelegramController extends BaseController {
                 return;
             }
             if (session?.estado === 'esperando_categoria') return;
-
-
-            // --- Lógica de Procesamiento General (Creación de borrador) ---
             try {
                 let tipo: 'texto' | 'audio' | 'imagen';
                 let contenido: string;
@@ -332,7 +320,6 @@ export class TelegramController extends BaseController {
                     reply_markup: mensajeInicial.reply_markup,
                 });
                 
-                // --- GUARDAR ID DEL MENSAJE ORIGINAL ---
                 currentSession.originalMessageId = sentMessage.message_id; 
 
             } catch (e) {
@@ -340,9 +327,6 @@ export class TelegramController extends BaseController {
                 bot.sendMessage(chatId, '❌ Error al procesar el mensaje.');
             }
         });
-
-
-        // --- Manejador de Callback Queries ---
 
         bot.on('callback_query', async (query) => {
             const chatId = query.message!.chat.id;
@@ -361,7 +345,6 @@ export class TelegramController extends BaseController {
             const originalMessageId = sessionData.originalMessageId;
 
 
-            // 1. CONFIRMACIÓN FINAL (Desde el mensaje de 3 botones)
             if (data === 'confirmar') {
                 if (!this.datosCompletos(sessionData)) {
                     const faltantes = this.camposFaltantes(sessionData);
@@ -373,12 +356,11 @@ export class TelegramController extends BaseController {
                     return;
                 }
                 
-                // Editamos el mensaje actual para mostrar el estado final (NO SE BORRA)
                 const mensajeFinal = this.getDatosMensaje(sessionData, '✅ Datos confirmados y guardados:').text;
                 await bot.editMessageText(mensajeFinal, {
-                    chatId: chatId,
-                    messageId: messageId, 
-                    reply_markup: { inline_keyboard: [] } // Quitamos los botones
+                    chat_id: chatId,
+                    message_id: messageId, 
+                    reply_markup: { inline_keyboard: [] } 
                 }).catch(console.error);
 
                 const operacionData = await this.convertirUserSessionAOperacionData(sessionData);
@@ -392,23 +374,20 @@ export class TelegramController extends BaseController {
                 delete userSessions[chatId];
 
             } 
-            // 2. INICIAR EDICIÓN (Desde el mensaje de 3 botones)
             else if (data === 'editar') {
                 sessionData.modoEdicion = true;
-                sessionData.originalMessageId = messageId; // Guarda el ID del mensaje que será reemplazado más tarde
+                sessionData.originalMessageId = messageId; 
                 mostrarMenuEdicion(bot, chatId, sessionData);
 
             } 
-            // 3. CANCELAR OPERACIÓN (Desde el mensaje de 3 botones)
             else if (data === 'cancelar') {
                 sessionData.modoEdicion = false;
                 sessionData.estado = undefined;
                 sessionData.campo = undefined;
                 
-                // Editamos el mensaje original para mostrar el estado final (NO SE BORRA)
                 await bot.editMessageText('❌ Operación cancelada.', {
-                    chatId: chatId,
-                    messageId: messageId,
+                    chat_id: chatId,
+                    message_id: messageId,
                     reply_markup: { inline_keyboard: [] }
                 }).catch(console.error);
                 
@@ -420,18 +399,14 @@ export class TelegramController extends BaseController {
                 delete userSessions[chatId];
 
             } 
-            // 4. CONFIRMAR CAMBIOS (Desde el menú de edición) <-- ELIMINA VIEJO Y ENVÍA NUEVO MENSAJE
             else if (data === 'confirmar_edicion') {
                 
-                // 4a. Eliminar el menú de edición (mensaje actual)
                 await bot.deleteMessage(chatId, messageId).catch(console.error); 
 
-                // 4b. Eliminar el mensaje original (borrador viejo)
                  if (originalMessageId) {
                     await bot.deleteMessage(chatId, originalMessageId).catch(console.error);
                 }
 
-                // 4c. Crear y enviar un *NUEVO* mensaje (el borrador final actualizado)
                 sessionData.modoEdicion = false; 
                 sessionData.estado = undefined;
                 sessionData.campo = undefined;
@@ -442,25 +417,19 @@ export class TelegramController extends BaseController {
                     reply_markup: mensajeActualizado.reply_markup,
                 });
                 
-                // 4d. Actualizar la sesión con el ID del NUEVO mensaje como 'originalMessageId'
                 sessionData.originalMessageId = sentMessage.message_id;
                 
             }
-            // 5. CANCELAR EDICIÓN (Desde el menú de edición)
             else if (data === 'cancelar_edicion') {
-                // Eliminar el menú de edición (mensaje actual)
                 await bot.deleteMessage(chatId, messageId).catch(console.error); 
                 sessionData.modoEdicion = false;
                 sessionData.estado = undefined;
                 sessionData.campo = undefined;
-                // El mensaje original de 3 botones permanece.
                 await bot.sendMessage(chatId, '❌ Edición cancelada, volviendo al borrador original.');
             }
-            // 6. EDITAR CAMPO ESPECÍFICO (Monto, Fecha, Descripción, Categoría)
             else if (data.startsWith('editar_')) {
                 const campo = data.replace('editar_', '') as 'monto' | 'fecha' | 'categoria' | 'descripcion';
                 
-                // Eliminamos el menú de edición actual
                 await bot.deleteMessage(chatId, messageId).catch(console.error); 
                 
                 if (campo === 'categoria') {
@@ -483,11 +452,9 @@ export class TelegramController extends BaseController {
                 }
             
             } 
-            // 7. SELECCIÓN DE CATEGORÍA
             else if (data.startsWith('select_cat:')) {
                 const categoriaNombre = data.substring('select_cat:'.length);
                 
-                // BORRAMOS el menú de categorías
                 await bot.deleteMessage(chatId, messageId).catch(console.error); 
 
                 sessionData.categoria = categoriaNombre;
