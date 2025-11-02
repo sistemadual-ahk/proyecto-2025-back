@@ -8,16 +8,19 @@ import { CategoriaService } from '@services/categoria.service';
 import { TipoOperacion } from '@models/entities/tipoOperacion';
 import { BilleteraService } from '@services/billetera.service';
 import { UsuarioService } from '@services/usuario.service';
+import { categoriaService } from 'main/config/dependencies'; // Asumo que esto es correcto
+import { CategoriaDto } from '../dtos/categoriaDto';
 
 interface UserSession {
     modoEdicion: boolean;
-    estado?: 'esperando_monto' | 'esperando_fecha' | 'esperando_general' | 'menu_principal';
+    estado?: 'esperando_monto' | 'esperando_fecha' | 'esperando_descripcion' | 'esperando_categoria' | 'menu_principal';
     campo?: 'monto' | 'fecha' | 'categoria' | 'descripcion';
     monto?: number | string;
     fecha?: string;
-    categoria?: string;
+    categoria?: string; 
     descripcion?: string;
     telefono?: string;
+    originalMessageId?: number; // ID del mensaje inicial con los 3 botones (el que debe ser borrado y reemplazado al editar)
 }
 
 const token = process.env['TELEGRAM_BOT_TOKEN']!;
@@ -28,40 +31,59 @@ export class TelegramController extends BaseController {
     constructor(private openaiService: OpenAIService, private categoriaService: CategoriaService, private billeteraService: BilleteraService, private usuarioService: UsuarioService) {
         super();
     }
+    
+    // --- HELPERS DE FORMATO Y VALIDACIÓN ---
 
-    private chequearEnteroDesdeMensaje(textoRecibido: string): number | null {
-        const valorLimpio = textoRecibido.trim();
-        if (valorLimpio === '') return null;
-        const numeroConvertido = Number(valorLimpio);
+    private getDatosMensaje(datos: UserSession, titulo: string, incluirBotones: boolean = false): { text: string, reply_markup?: any } {
+        const text = `${titulo}\n\n` +
+            `💰 Monto: ${datos.monto ?? '❌ Sin dato'}\n` +
+            `📅 Fecha: ${datos.fecha ?? '❌ Sin dato'}\n` +
+            `📂 Categoría: ${datos.categoria ?? '❌ Sin dato'}\n` +
+            `📝 Descripción: ${datos.descripcion ?? '❌ Sin dato'}\n\n`;
+            
+        let reply_markup = undefined;
+        
+        if (incluirBotones) {
+            reply_markup = {
+                inline_keyboard: [
+                    [
+                        { text: '✅ Confirmar', callback_data: 'confirmar' },
+                        { text: '✏️ Editar', callback_data: 'editar' },
+                        { text: '❌ Cancelar', callback_data: 'cancelar' },
+                    ],
+                ],
+            };
+        }
+        
+        return { text, reply_markup };
+    }
+
+    private chequearMontoDesdeMensaje(textoRecibido: string): number | null {
+        const valorLimpio = textoRecibido.trim().replace(',', '.'); 
+        const numeroConvertido = parseFloat(valorLimpio);
 
         if (
             !isNaN(numeroConvertido) &&
             isFinite(numeroConvertido) &&
-            Number.isInteger(numeroConvertido)
+            numeroConvertido > 0 
         ) {
-            if (String(numeroConvertido) === valorLimpio) {
-                return numeroConvertido;
-            }
+            return parseFloat(numeroConvertido.toFixed(2));
         }
         return null;
     }
 
     private chequearFechaDesdeMensaje(textoRecibido: string): string | null {
         const valorLimpio = textoRecibido.trim();
-        const regexFecha = /^(\d{2})-(\d{2})-(\d{4})$/;
+        const regexFecha = /^(\d{2})[-./](\d{2})[-./](\d{4})$/;
         const match = valorLimpio.match(regexFecha);
 
-        if (!match) {
-            return null;
-        }
+        if (!match) return null;
 
         const diaStr = match[1];
         const mesStr = match[2];
         const anioStr = match[3];
 
-        if (!diaStr || !mesStr || !anioStr) {
-            return null;
-        }
+        if (!diaStr || !mesStr || !anioStr) return null;
 
         const dia = parseInt(diaStr, 10);
         const mes = parseInt(mesStr, 10);
@@ -74,12 +96,11 @@ export class TelegramController extends BaseController {
             fecha.getMonth() === mes - 1 &&
             fecha.getDate() === dia
         ) {
-            return valorLimpio;
+            return `${diaStr}-${mesStr}-${anioStr}`; 
         }
 
         return null;
     }
-
 
     private datosCompletos(datos: UserSession): boolean {
         return !!(datos.monto && datos.fecha && datos.categoria && datos.descripcion);
@@ -91,40 +112,28 @@ export class TelegramController extends BaseController {
     }
 
     private async convertirUserSessionAOperacionData(session: UserSession): Promise<Partial<Operacion> | null> {
-        if (!session.monto || !session.fecha || !session.categoria || !session.descripcion) {
-            return null;
-        }
+        if (!session.monto || !session.fecha || !session.categoria || !session.descripcion) return null;
 
         const monto = typeof session.monto === 'string' ? parseFloat(session.monto) : session.monto;
-        if (isNaN(monto)) {
-            return null;
-        }
+        if (isNaN(monto)) return null;
 
         const categoria = await this.categoriaService.findByName(session.categoria);
-        if (!categoria) {
-            return null;
-        }
+        if (!categoria) return null;
 
         const fechaPartes = session.fecha.split('-');
-        if (fechaPartes.length !== 3) {
-            return null;
-        }
+        if (fechaPartes.length !== 3) return null;
 
         const diaStr = fechaPartes[0];
         const mesStr = fechaPartes[1];
         const anioStr = fechaPartes[2];
 
-        if (!diaStr || !mesStr || !anioStr) {
-            return null;
-        }
+        if (!diaStr || !mesStr || !anioStr) return null;
 
         const dia = parseInt(diaStr, 10);
         const mes = parseInt(mesStr, 10);
         const anio = parseInt(anioStr, 10);
 
-        if (isNaN(dia) || isNaN(mes) || isNaN(anio)) {
-            return null;
-        }
+        if (isNaN(dia) || isNaN(mes) || isNaN(anio)) return null;
 
         const fecha = new Date(anio, mes - 1, dia);
 
@@ -133,10 +142,11 @@ export class TelegramController extends BaseController {
             fecha,
             categoria: categoria,
             descripcion: session.descripcion,
-            //TODO: CUIDADO! DEBERÍAMOS VERIFICAR SI ES INGRESO O EGRES O OTRO
             tipo: TipoOperacion.EGRESO,
         };
     }
+    
+    // --- FUNCIONES DEL BOT ---
 
     async startBot() {
         const bot = new TelegramBot(token, { polling: true });
@@ -151,13 +161,8 @@ export class TelegramController extends BaseController {
             });
         }
 
-        function mostrarMenuEdicion(bot: TelegramBot, chatId: number, datos: any) {
-            const mensaje = `✏️ Estos son los datos actuales:\n\n` +
-                `💰 Monto: ${datos.monto ?? '❌ Sin dato'}\n` +
-                `📅 Fecha: ${datos.fecha ?? '❌ Sin dato'}\n` +
-                `📂 Categoría: ${datos.categoria ?? '❌ Sin dato'}\n` +
-                `📝 Descripción: ${datos.descripcion ?? '❌ Sin dato'}\n\n` +
-                `¿Qué campo querés editar?`;
+        const mostrarMenuEdicion = (bot: TelegramBot, chatId: number, datos: UserSession) => {
+            const mensaje = this.getDatosMensaje(datos, '✏️ Estos son los datos actuales:').text + `\n¿Qué campo querés editar?`;
 
             bot.sendMessage(chatId, mensaje, {
                 reply_markup: {
@@ -171,59 +176,84 @@ export class TelegramController extends BaseController {
                             { text: '📝 Descripción', callback_data: 'editar_descripcion' },
                         ],
                         [
-                            { text: '✅ Confirmar', callback_data: 'confirmar' },
-                            { text: '❌ Cancelar', callback_data: 'cancelar' },
+                            // Este botón CONFIRMA los cambios hechos en el menú de edición y REEMPLAZA el mensaje original
+                            { text: '✅ Confirmar Cambios', callback_data: 'confirmar_edicion' }, 
+                            { text: '❌ Cancelar Edición', callback_data: 'cancelar_edicion' },
                         ],
                     ],
                 },
             });
-        }
+        };
+
+        const mostrarMenuCategorias = async (bot: TelegramBot, chatId: number) => {
+            try {
+                const categorias: CategoriaDto[] = await this.categoriaService.findAll(); 
+                
+                const botonesCategorias = categorias.map((categoria: CategoriaDto) => {
+                    return [{
+                        text: categoria.nombre,
+                        callback_data: `select_cat:${categoria.nombre}` 
+                    }];
+                });
+
+                await bot.sendMessage(chatId, "📂 Por favor, seleccioná la nueva categoría:", {
+                    reply_markup: {
+                        inline_keyboard: botonesCategorias
+                    }
+                });
+
+                userSessions[chatId].estado = 'esperando_categoria'; 
+                userSessions[chatId].campo = 'categoria';
+
+            } catch (e) {
+                console.error("Error al obtener categorías:", e);
+                await bot.sendMessage(chatId, "❌ Hubo un error al cargar las categorías.");
+                mostrarMenuEdicion(bot, chatId, userSessions[chatId]); 
+            }
+        };
+
+        // --- Manejadores de Validación (Mantienen estado de espera si falla) ---
 
         const manejarValidacionMonto = async (chatId: number, nuevoValor: string, session: UserSession) => {
-            const campo = session.campo as string;
-            const montoNumerico = this.chequearEnteroDesdeMensaje(nuevoValor);
+            const montoNumerico = this.chequearMontoDesdeMensaje(nuevoValor);
 
             if (montoNumerico === null) {
-                await bot.sendMessage(chatId, '⚠️ El monto debe ser un *número entero válido*. Intenta de nuevo.', {
+                await bot.sendMessage(chatId, '⚠️ El monto debe ser un *número positivo* (entero o decimal). Intenta de nuevo. Formato: 12.34', {
                     parse_mode: 'Markdown'
                 });
-                await bot.sendMessage(chatId, `✏️ Ingresá el nuevo valor para *${campo}*:`, {
-                    parse_mode: 'Markdown',
-                    reply_markup: { force_reply: true },
-                });
-                return;
+                return; 
             }
 
             session.monto = montoNumerico;
             session.estado = undefined;
             session.campo = undefined;
+            session.modoEdicion = true;
 
-            await bot.sendMessage(chatId, `✅ ${campo} actualizado. Nuevo valor: ${montoNumerico}`);
+            await bot.sendMessage(chatId, `✅ Monto actualizado. Nuevo valor: ${montoNumerico}`);
             mostrarMenuEdicion(bot, chatId, session);
         };
 
         const manejarValidacionFecha = async (chatId: number, nuevoValor: string, session: UserSession) => {
-            const campo = session.campo as string;
             const fechaValida = this.chequearFechaDesdeMensaje(nuevoValor);
 
             if (fechaValida === null) {
                 await bot.sendMessage(chatId, '⚠️ La fecha debe ser válida y tener el formato *DD-MM-AAAA* (ej: 25-12-2025). Intenta de nuevo.', {
                     parse_mode: 'Markdown'
                 });
-                await bot.sendMessage(chatId, `✏️ Ingresá el nuevo valor para *${campo}*:`, {
-                    parse_mode: 'Markdown',
-                    reply_markup: { force_reply: true },
-                });
-                return;
+                return; 
             }
 
             session.fecha = fechaValida;
             session.estado = undefined;
             session.campo = undefined;
+            session.modoEdicion = true;
 
-            await bot.sendMessage(chatId, `✅ ${campo} actualizado. Nuevo valor: ${fechaValida}`);
+            await bot.sendMessage(chatId, `✅ Fecha actualizada. Nuevo valor: ${fechaValida}`);
             mostrarMenuEdicion(bot, chatId, session);
         };
+
+
+        // --- Manejador de Mensajes (Creación del Borrador Inicial) ---
 
         bot.on('message', async (msg) => {
             const chatId = msg.chat?.id;
@@ -232,40 +262,27 @@ export class TelegramController extends BaseController {
             const session = userSessions[chatId];
             const nuevoValor = msg.text || '';
 
+            // Manejar validación de monto/fecha/descripción
             if (session?.estado === 'esperando_monto') {
                 await manejarValidacionMonto(chatId, nuevoValor, session);
                 return;
             }
-
-
             if (session?.estado === 'esperando_fecha') {
                 await manejarValidacionFecha(chatId, nuevoValor, session);
                 return;
             }
-
-            if (session?.modoEdicion && session.estado === 'esperando_general') {
-                const campo = session.campo;
-                if (!campo) return;
-
-                if (campo === 'monto') {
-                    session.monto = nuevoValor.trim();
-                } else if (campo === 'fecha') {
-                    session.fecha = nuevoValor.trim();
-                } else if (campo === 'categoria') {
-                    session.categoria = nuevoValor.trim();
-                } else if (campo === 'descripcion') {
-                    session.descripcion = nuevoValor.trim();
-                }
-
+             if (session?.modoEdicion && session.estado === 'esperando_descripcion' && session.campo === 'descripcion') {
+                session.descripcion = nuevoValor.trim();
                 session.estado = undefined;
                 session.campo = undefined;
-
-                await bot.sendMessage(chatId, `✅ ${campo} actualizado. Nuevo valor: ${nuevoValor.trim()}`);
+                await bot.sendMessage(chatId, `✅ Descripción actualizada. Nuevo valor: ${nuevoValor.trim()}`);
                 mostrarMenuEdicion(bot, chatId, session);
                 return;
             }
+            if (session?.estado === 'esperando_categoria') return;
 
 
+            // --- Lógica de Procesamiento General (Creación de borrador) ---
             try {
                 let tipo: 'texto' | 'audio' | 'imagen';
                 let contenido: string;
@@ -295,7 +312,6 @@ export class TelegramController extends BaseController {
                 const datosProcesados = await this.openaiService.procesarEntrada(tipo, contenido);
 
                 if (!userSessions[chatId]) {
-                    // --- Inicializar sesión con modoEdicion false
                     userSessions[chatId] = { modoEdicion: false };
                 }
 
@@ -309,26 +325,16 @@ export class TelegramController extends BaseController {
                 }
 
                 const datos = currentSession;
+                const mensajeInicial = this.getDatosMensaje(datos, '📋 Datos detectados:', true);
+                mensajeInicial.text += `¿Deseás confirmarlos?`;
 
-                await bot.sendMessage(chatId,
-                    `📋 Datos detectados:\n` +
-                    `💰 Monto: ${datos.monto ?? '❌ Sin dato'}\n` +
-                    `📅 Fecha: ${datos.fecha ?? '❌ Sin dato'}\n` +
-                    `📂 Categoría: ${datos.categoria ?? '❌ Sin dato'}\n` +
-                    `📝 Descripción: ${datos.descripcion ?? '❌ Sin dato'}\n\n` +
-                    `¿Deseás confirmarlos?`,
-                    {
-                        reply_markup: {
-                            inline_keyboard: [
-                                [
-                                    { text: '✅ Confirmar', callback_data: 'confirmar' },
-                                    { text: '✏️ Editar', callback_data: 'editar' },
-                                    { text: '❌ Cancelar', callback_data: 'cancelar' },
-                                ],
-                            ],
-                        },
-                    }
-                );
+                const sentMessage = await bot.sendMessage(chatId, mensajeInicial.text, {
+                    reply_markup: mensajeInicial.reply_markup,
+                });
+                
+                // --- GUARDAR ID DEL MENSAJE ORIGINAL ---
+                currentSession.originalMessageId = sentMessage.message_id; 
+
             } catch (e) {
                 console.error(e);
                 bot.sendMessage(chatId, '❌ Error al procesar el mensaje.');
@@ -336,8 +342,11 @@ export class TelegramController extends BaseController {
         });
 
 
+        // --- Manejador de Callback Queries ---
+
         bot.on('callback_query', async (query) => {
             const chatId = query.message!.chat.id;
+            const messageId = query.message!.message_id; 
             if (!chatId) return;
 
             const data = query.data;
@@ -348,7 +357,11 @@ export class TelegramController extends BaseController {
                 bot.sendMessage(chatId, '❌ No se encontró una sesión activa para esta operación.');
                 return;
             }
+            
+            const originalMessageId = sessionData.originalMessageId;
 
+
+            // 1. CONFIRMACIÓN FINAL (Desde el mensaje de 3 botones)
             if (data === 'confirmar') {
                 if (!this.datosCompletos(sessionData)) {
                     const faltantes = this.camposFaltantes(sessionData);
@@ -356,9 +369,17 @@ export class TelegramController extends BaseController {
                         `⚠️ No podés confirmar. Faltan los siguientes datos obligatorios:\n` +
                         faltantes.map(f => `- ${f}`).join('\n')
                     );
-                    mostrarMenuEdicion(bot, chatId, sessionData);
+                    bot.answerCallbackQuery(query.id);
                     return;
                 }
+                
+                // Editamos el mensaje actual para mostrar el estado final (NO SE BORRA)
+                const mensajeFinal = this.getDatosMensaje(sessionData, '✅ Datos confirmados y guardados:').text;
+                await bot.editMessageText(mensajeFinal, {
+                    chatId: chatId,
+                    messageId: messageId, 
+                    reply_markup: { inline_keyboard: [] } // Quitamos los botones
+                }).catch(console.error);
 
                 const operacionData = await this.convertirUserSessionAOperacionData(sessionData);
                 if (!operacionData) {
@@ -367,64 +388,120 @@ export class TelegramController extends BaseController {
                 }
 
                 await this.openaiService.guardarDatos(operacionData);
-                bot.sendMessage(chatId, '✅ Datos confirmados.');
+                bot.sendMessage(chatId, '✅ ¡Operación guardada exitosamente!');
                 delete userSessions[chatId];
 
-            } else if (data === 'editar') {
+            } 
+            // 2. INICIAR EDICIÓN (Desde el mensaje de 3 botones)
+            else if (data === 'editar') {
                 sessionData.modoEdicion = true;
+                sessionData.originalMessageId = messageId; // Guarda el ID del mensaje que será reemplazado más tarde
                 mostrarMenuEdicion(bot, chatId, sessionData);
 
-            } else if (data === 'cancelar') {
+            } 
+            // 3. CANCELAR OPERACIÓN (Desde el mensaje de 3 botones)
+            else if (data === 'cancelar') {
                 sessionData.modoEdicion = false;
                 sessionData.estado = undefined;
                 sessionData.campo = undefined;
+                
+                // Editamos el mensaje original para mostrar el estado final (NO SE BORRA)
+                await bot.editMessageText('❌ Operación cancelada.', {
+                    chatId: chatId,
+                    messageId: messageId,
+                    reply_markup: { inline_keyboard: [] }
+                }).catch(console.error);
+                
                 const operacionData = await this.convertirUserSessionAOperacionData(sessionData);
                 if (operacionData) {
                     await this.openaiService.borrarDatos(operacionData);
                 }
-                bot.sendMessage(chatId, '❌ Operación cancelada.');
+                bot.sendMessage(chatId, '❌ Operación cancelada y datos temporales eliminados.');
                 delete userSessions[chatId];
 
-            } else if (data.startsWith('editar_')) {
+            } 
+            // 4. CONFIRMAR CAMBIOS (Desde el menú de edición) <-- ELIMINA VIEJO Y ENVÍA NUEVO MENSAJE
+            else if (data === 'confirmar_edicion') {
+                
+                // 4a. Eliminar el menú de edición (mensaje actual)
+                await bot.deleteMessage(chatId, messageId).catch(console.error); 
+
+                // 4b. Eliminar el mensaje original (borrador viejo)
+                 if (originalMessageId) {
+                    await bot.deleteMessage(chatId, originalMessageId).catch(console.error);
+                }
+
+                // 4c. Crear y enviar un *NUEVO* mensaje (el borrador final actualizado)
+                sessionData.modoEdicion = false; 
+                sessionData.estado = undefined;
+                sessionData.campo = undefined;
+                
+                const mensajeActualizado = this.getDatosMensaje(sessionData, '📋 Datos actualizados. ¿Confirmar?', true);
+                
+                const sentMessage = await bot.sendMessage(chatId, mensajeActualizado.text, {
+                    reply_markup: mensajeActualizado.reply_markup,
+                });
+                
+                // 4d. Actualizar la sesión con el ID del NUEVO mensaje como 'originalMessageId'
+                sessionData.originalMessageId = sentMessage.message_id;
+                
+            }
+            // 5. CANCELAR EDICIÓN (Desde el menú de edición)
+            else if (data === 'cancelar_edicion') {
+                // Eliminar el menú de edición (mensaje actual)
+                await bot.deleteMessage(chatId, messageId).catch(console.error); 
+                sessionData.modoEdicion = false;
+                sessionData.estado = undefined;
+                sessionData.campo = undefined;
+                // El mensaje original de 3 botones permanece.
+                await bot.sendMessage(chatId, '❌ Edición cancelada, volviendo al borrador original.');
+            }
+            // 6. EDITAR CAMPO ESPECÍFICO (Monto, Fecha, Descripción, Categoría)
+            else if (data.startsWith('editar_')) {
                 const campo = data.replace('editar_', '') as 'monto' | 'fecha' | 'categoria' | 'descripcion';
-                bot.sendMessage(chatId, `✏️ Ingresá el nuevo valor para *${campo}*:`, {
-                    parse_mode: 'Markdown',
-                });
-
-                bot.once('message', async (msg) => {
-                    const nuevoValor = msg.text;
-                    if (!nuevoValor) {
-                        bot.sendMessage(chatId, '⚠️ No se recibió texto válido.');
-                        return;
-                    }
-
-                    const currentSession = userSessions[chatId];
-                    if (!currentSession) {
-                        bot.sendMessage(chatId, '❌ Sesión no encontrada.');
-                        return;
-                    }
-
+                
+                // Eliminamos el menú de edición actual
+                await bot.deleteMessage(chatId, messageId).catch(console.error); 
+                
+                if (campo === 'categoria') {
+                    mostrarMenuCategorias(bot, chatId);
+                } else {
+                    sessionData.estado = `esperando_${campo}` as UserSession['estado'];
+                    sessionData.campo = campo;
+                    let prompt = '';
                     if (campo === 'monto') {
-                        currentSession.monto = nuevoValor;
+                        prompt = '✏️ Ingresá el nuevo *monto* (solo números, puedes usar decimales con punto o coma):';
                     } else if (campo === 'fecha') {
-                        currentSession.fecha = nuevoValor;
-                    } else if (campo === 'categoria') {
-                        currentSession.categoria = nuevoValor;
+                        prompt = '✏️ Ingresá la nueva *fecha* en formato DD-MM-AAAA (ej: 25-12-2025):';
                     } else if (campo === 'descripcion') {
-                        currentSession.descripcion = nuevoValor;
+                        prompt = '✏️ Ingresá la nueva *descripción*:';
                     }
+                    bot.sendMessage(chatId, prompt, {
+                        parse_mode: 'Markdown',
+                        reply_markup: { force_reply: true },
+                    });
+                }
+            
+            } 
+            // 7. SELECCIÓN DE CATEGORÍA
+            else if (data.startsWith('select_cat:')) {
+                const categoriaNombre = data.substring('select_cat:'.length);
+                
+                // BORRAMOS el menú de categorías
+                await bot.deleteMessage(chatId, messageId).catch(console.error); 
 
-                    currentSession.modoEdicion = false;
+                sessionData.categoria = categoriaNombre;
+                sessionData.estado = undefined;
+                sessionData.campo = undefined;
+                sessionData.modoEdicion = true;
 
-                    bot.sendMessage(chatId, `✅ ${campo} actualizado.`);
-                    mostrarMenuEdicion(bot, chatId, currentSession);
-                });
+                await bot.sendMessage(chatId, `✅ Categoría actualizada. Nuevo valor: *${categoriaNombre}*`, { parse_mode: 'Markdown' });
+                mostrarMenuEdicion(bot, chatId, sessionData);
             }
 
             bot.answerCallbackQuery(query.id);
         });
     }
-
 
     public async start() {
         try {
