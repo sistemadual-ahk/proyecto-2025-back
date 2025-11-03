@@ -380,25 +380,21 @@ export class TelegramController extends BaseController {
                 mostrarMenuEdicion(bot, chatId, sessionData);
 
             } 
-            else if (data === 'cancelar') {
-                sessionData.modoEdicion = false;
-                sessionData.estado = undefined;
-                sessionData.campo = undefined;
-                
-                await bot.editMessageText('❌ Operación cancelada.', {
-                    chat_id: chatId,
-                    message_id: messageId,
-                    reply_markup: { inline_keyboard: [] }
-                }).catch(console.error);
-                
-                const operacionData = await this.convertirUserSessionAOperacionData(sessionData);
-                if (operacionData) {
-                    await this.openaiService.borrarDatos(operacionData);
-                }
-                bot.sendMessage(chatId, '❌ Operación cancelada y datos temporales eliminados.');
-                delete userSessions[chatId];
 
-            } 
+           else if (data === 'cancelar') {
+            sessionData.modoEdicion = false;
+            sessionData.estado = undefined;
+            sessionData.campo = undefined;
+
+            await bot.editMessageText('❌ Operación cancelada.', {
+                chat_id: chatId,
+                message_id: messageId,
+                reply_markup: { inline_keyboard: [] }
+            }).catch(console.error);
+
+            bot.sendMessage(chatId, '❌ Operación cancelada y datos descartados.');
+            delete userSessions[chatId]; 
+            }
             else if (data === 'confirmar_edicion') {
                 
                 await bot.deleteMessage(chatId, messageId).catch(console.error); 

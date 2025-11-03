@@ -130,23 +130,18 @@ Responde ÚNICAMENTE con un JSON válido: {"monto": NUMERO, "fecha": "DD-MM-YYYY
     }
   }
 
-  public async borrarDatos(operacion: Partial<Operacion>): Promise<void> {
+  public async borrarDatos(operacionId: string): Promise<void> { 
     try {
-      /*await OperacionModel.deleteOne({
-        monto: operacion.monto,
-        fecha: operacion.fecha,
-        descripcion: operacion.descripcion,
-      });*/
-      console.log('🗑️ Datos eliminados');
-      if (!operacion.id) {
-      throw new Error('❌ No se proporcionó el ID de la operación a eliminar');
-      }
+      const fueEliminado = await this.operacionRepo.deleteById(operacionId); 
 
-    await this.operacionRepo.deleteById(String(operacion.id));
-    console.log('🗑️ Datos eliminados');
+      if (fueEliminado) {
+        console.log(`🗑️ Datos eliminados con ID: ${operacionId}`);
+      } else {
+        console.warn(`⚠️ No se encontró la operación con ID: ${operacionId} para eliminar.`);
+      }
     } catch (error) {
       console.error('❌ Error al borrar datos:', error);
     }
   }
-  }
+ }
 
