@@ -27,6 +27,14 @@ export class CategoriaService {
         return categoria;
     }
 
+        async findByName(nombre: string) {
+        const categoria = await this.categoriaRepository.findByName(nombre);
+        if (!categoria) {
+            throw new NotFoundError(`Categoría con nombre ${nombre} no encontrada`);
+        }
+        return categoria;
+    }
+
     async findAllByUser(userId: string) {
         const categorias = await this.categoriaRepository.findAllByUser(userId);
         return categorias.map(c => this.toDTO(c));
