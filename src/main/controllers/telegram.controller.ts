@@ -114,7 +114,7 @@ export class TelegramController extends BaseController {
         const monto = typeof session.monto === 'string' ? parseFloat(session.monto) : session.monto;
         if (isNaN(monto)) return null;
 
-        const categoria = await this.categoriaService.findByName(session.categoria);
+        const categoria =  await this.categoriaService.findByName(session.categoria);
         if (!categoria) return null;
 
         const fechaPartes = session.fecha.split('-');
