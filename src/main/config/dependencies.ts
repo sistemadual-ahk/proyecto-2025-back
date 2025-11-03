@@ -26,6 +26,7 @@ export const operacionService = new OperacionService(operacionRepo, categoriaRep
 export const billeteraService = new BilleteraService(billeteraRepo, usuarioRepo);
 export const objetivoService = new ObjetivoService(objetivoRepo, usuarioRepo, billeteraRepo, categoriaRepo);
 export const usuarioService = new UsuarioService(usuarioRepo);
+import { ProvinciaService } from "@services/ubicacion/provincia.service";
 export const openaiService = new OpenAIService(operacionRepo, categoriaService);
 
 // Controladores

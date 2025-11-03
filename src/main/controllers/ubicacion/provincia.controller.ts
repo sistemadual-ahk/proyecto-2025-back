@@ -1,15 +1,16 @@
-import { Request, Response } from "express";
-import { ProvinciaService } from "@services/ubicacion/provincia.service";
-import { asyncHandler } from "../../middlewares/error.middleware";
-import { BaseController } from "../base.controller";
+import { Request, Response } from 'express';
+import { ProvinciaService } from '@services/ubicacion/provincia.service';
 
-export class ProvinciaController extends BaseController {
-    constructor(private provinciaService: ProvinciaService) {
-        super();
-    }
+export class ProvinciaController {
+    constructor(private provinciaService: ProvinciaService) {}
 
-    getAllProvincias = asyncHandler(async (_req: Request, res: Response) => {
-        const provincias = await this.provinciaService.findAll();
-        return this.sendSuccess(res, 200, provincias, "Provincias obtenidas correctametne");
-    });
+    public getAllProvincias = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const provincias = await this.provinciaService.findAll();
+            res.status(200).json(provincias);
+        } catch (error) {
+            console.error('Error fetching provincias:', error);
+            res.status(500).json({ message: 'Error al obtener las provincias' });
+        }
+    };
 }
