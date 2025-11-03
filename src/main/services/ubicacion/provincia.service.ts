@@ -10,8 +10,12 @@ export class ProvinciaService {
         return provincias.map((p) => this.toDTO(p));
     }
 
+    async verificarUbicacionCompleta(provincia: string, municipio: string, localidad: string): Promise<boolean> {
+        return this.provinciaRepository.exists(provincia, municipio, localidad);
+    }
+
     private toDTO(provincia: Provincia) {
-        // no id requested
+        // no manejamos ID
         return {
             nombre: provincia.nombre,
             poblacion: provincia.poblacion,
