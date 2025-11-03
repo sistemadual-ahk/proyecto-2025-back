@@ -4,7 +4,7 @@ import { OperacionService } from "@services/operacion.service";
 import { BilleteraService } from "@services/billetera.service";
 import { ObjetivoService } from "@services/objetivo.service";
 import { UsuarioService } from "@services/usuario.service";
-import { ProvinciaService } from "@services/ubicacion/provincia.service"; // 👈 NUEVO: Servicio de Provincia
+import { ProvinciaService } from "@services/ubicacion/provincia.service";
 import { OpenAIService } from "@services/external/openai.service";
 
 // Importaciones de Clases de Controladores
@@ -14,7 +14,7 @@ import { BilleteraController } from "@controllers/billetera.controller";
 import { ObjetivoController } from "@controllers/objetivo.controller";
 import { UsuarioController } from "@controllers/usuario.controller";
 import { TelegramController } from "@controllers/telegram.controller";
-import { ProvinciaController } from "@controllers/ubicacion/provincia.controller"; // 👈 NUEVO: Controlador de Provincia
+import { ProvinciaController } from "@controllers/ubicacion/provincia.controller";
 
 // Importaciones de Clases de Repositorios
 import { RepositorioDeBilleteras, RepositorioDeObjetivos, RepositorioDeOperaciones, RepositorioDeUsuarios, RepositorioDeCategorias, RepositorioDeProvincias } from "@models/repositories";
@@ -36,7 +36,7 @@ export const billeteraService = new BilleteraService(billeteraRepo, usuarioRepo)
 export const objetivoService = new ObjetivoService(objetivoRepo, usuarioRepo, billeteraRepo, categoriaRepo);
 export const usuarioService = new UsuarioService(usuarioRepo);
 export const openaiService = new OpenAIService(operacionRepo, categoriaService);
-export const provinciaService = new ProvinciaService(provinciaRepo); // 👈 NUEVO SERVICIO
+export const provinciaService = new ProvinciaService(provinciaRepo);
 
 
 // --- CONTROLADORES (Instanciación) ---
@@ -46,4 +46,4 @@ export const billeteraController = new BilleteraController(billeteraService);
 export const objetivoController = new ObjetivoController(objetivoService); 
 export const usuarioController = new UsuarioController(usuarioService); 
 export const telegramController = new TelegramController(openaiService, categoriaService, billeteraService, usuarioService);
-export const provinciaController = new ProvinciaController(provinciaService); // 👈 NUEVO CONTROLADOR (Soluciona el error)
+export const provinciaController = new ProvinciaController(provinciaService);

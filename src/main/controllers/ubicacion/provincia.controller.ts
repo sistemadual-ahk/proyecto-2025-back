@@ -1,27 +1,30 @@
-import { Request, Response } from 'express';
-import { ProvinciaService } from '@services/ubicacion/provincia.service'; // Asegúrate de que esta ruta sea correcta
+import { Request, Response } from "express";
+import { ProvinciaService } from "@services/ubicacion/provincia.service";
+import { asyncHandler, ValidationError } from "../../middlewares/error.middleware";
+import { BaseController } from "../base.controller";
 
-export class ProvinciaController {
-    // El constructor recibe el servicio (dependencia)
-    constructor(private provinciaService: ProvinciaService) {}
+export class ProvinciaController extends BaseController {
+    constructor(private provinciaService: ProvinciaService) {
+        super();
+    }
 
-    /**
-     * @description Maneja la petición GET /api/provincias, llama al servicio y envía la respuesta.
-     */
-    public getAllProvincias = async (req: Request, res: Response): Promise<void> => {
-        try {
-            // 1. Llama al método del servicio para obtener los datos
-            const provincias = await this.provinciaService.findAll();
-            
-            // 2. Envía una respuesta exitosa
-            res.status(200).json(provincias);
-            
-        } catch (error) {
-            // 3. Manejo de errores
-            console.error('Error al obtener las provincias:', error);
-            res.status(500).json({ message: 'Error interno del servidor al obtener provincias.' });
+    getAllProvincias = asyncHandler(async (_req: Request, res: Response) => {
+        const provincias = await this.provinciaService.findAll();
+        return this.sendSuccess(res, 200, provincias, "Provincias obtenidas correctamente");
+    });
+
+    // Para verificar datos antes de enviar a la DB desde front
+    verificar = asyncHandler(async (_req: Request, res: Response) => {
+        // Verifica query completo
+        const { provincia, municipio, localidad } = _req.query;
+
+        if (!provincia || !municipio || !localidad) {
+            throw new ValidationError("Para verificar hace falta provincia, municipio y localidad");
         }
-    };
-    
-    // Aquí puedes agregar otros métodos como getProvinciaById, etc.
+
+        // Realiza validacion con DB
+        const solicitudValida = await this.provinciaService.verificarUbicacionCompleta(String(provincia), String(municipio), String(localidad));
+
+        return this.sendSuccess(res, 200, { solicitudValida }, solicitudValida ? "Ubicacion verificada y existente" : "Ubicacion no encontrada");
+    });
 }
