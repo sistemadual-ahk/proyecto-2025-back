@@ -49,27 +49,19 @@ docker-compose up
 Crea un archivo `.env` en la raíz del proyecto:
 
 ```env
-# Configuración del servidor
 PORT=3000
 NODE_ENV=development
 
-# Configuración de MongoDB Atlas
-MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
+MONGODB_URI=mongodb+srv://user:password@ahk.xh0jhbc.mongodb.net
 MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
-MONGODB_DB_NAME=main
+MONGODB_DB_NAME=dummy
 
-# Configuración de CORS
 CORS_ORIGIN=http://localhost:3000
 
-# Configuración de logs
 LOG_LEVEL=info
 
-# Para auth0
-AUTH0_AUDIENCE=https://dev-zztnl4usqwhq2jl2.us.auth0.com/api/v2/
-AUTH0_DOMAIN=dev-zztnl4usqwhq2jl2.us.auth0.com
-
-# Para MongoDB local en Docker (alternativa)
-# MONGODB_URI=mongodb://admin:password123@mongo:27017/proyecto-2025?authSource=admin
+AUTH0_AUDIENCE=https example.com
+AUTH0_DOMAIN=domain
 ```
 
 ## 🏗️ Estructura de Docker

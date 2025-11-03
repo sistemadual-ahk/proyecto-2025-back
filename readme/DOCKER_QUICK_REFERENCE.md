@@ -146,14 +146,19 @@ curl -f http://localhost:3000/api/health
 
 ### Variables de Entorno
 ```env
-# Desarrollo
-NODE_ENV=development
 PORT=3000
-MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
+NODE_ENV=development
+
+MONGODB_URI=mongodb+srv://user:password@ahk.xh0jhbc.mongodb.net
 MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
-MONGODB_DB_NAME=main
+MONGODB_DB_NAME=dummy
+
 CORS_ORIGIN=http://localhost:3000
+
 LOG_LEVEL=info
+
+AUTH0_AUDIENCE=https example.com
+AUTH0_DOMAIN=domain
 
 # Producción
 NODE_ENV=production

@@ -222,13 +222,13 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - MONGODB_URI=mongodb+srv://ezequiel_escobar:kqnzhfDeCwRFnuMS@ahk.xh0jhbc.mongodb.net
+      - MONGODB_URI=mongodb+srv://user:password@ahk.xh0jhbc.mongodb.net
       - MONGODB_PARAMS=retryWrites=true&w=majority&appName=AHK
       - MONGODB_DB_NAME=dummy
       - CORS_ORIGIN=http://localhost:3000
       - LOG_LEVEL=info
-      - AUTH0_AUDIENCE=https://dev-zztnl4usqwhq2jl2.us.auth0.com/api/v2/
-      - AUTH0_DOMAIN=dev-zztnl4usqwhq2jl2.us.auth0.com
+      - AUTH0_AUDIENCE=https example.com
+      - AUTH0_DOMAIN=domain
     restart: unless-stopped
     networks:
       - app-network
@@ -246,9 +246,9 @@ services:
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=(admin)
-      - MONGO_INITDB_ROOT_PASSWORD=(password123)
-      - MONGO_INITDB_DATABASE=proyecto-2025
+      - MONGO_INITDB_ROOT_USERNAME=(user)
+      - MONGO_INITDB_ROOT_PASSWORD=(password)
+      - MONGO_INITDB_DATABASE=name
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped
