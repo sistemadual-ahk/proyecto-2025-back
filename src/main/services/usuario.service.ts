@@ -65,13 +65,25 @@ export class UsuarioService {
             }
 
             // suponiendo que esta completa:
-            const existeUbicacion = await this.provinciaService.verificarUbicacionCompleta(provincia, municipio, localidad);
+            // Verificar en base de datos (nuevo formato)
+                        // Verificar en base de datos (nuevo formato)
+            const ubicacionResult = await this.provinciaService.verificarUbicacionCompleta(
+                provincia,
+                municipio,
+                localidad
+            );
 
-            if (!existeUbicacion) {
+            if (!ubicacionResult.exists) {
                 const debugMsgUbicacion = `${provincia} > ${municipio} > ${localidad}`;
-                throw new ValidationError(`La combinacion ${debugMsgUbicacion} no existe.`);
+                throw new ValidationError(`La combinación ${debugMsgUbicacion} no existe.`);
             }
-            nuevaUbicacion = ubicacion;
+
+            // Usar las formas correctas que existen en la BD
+            nuevaUbicacion = {
+                provincia: ubicacionResult.provincia,
+                municipio: ubicacionResult.municipio,
+                localidad: ubicacionResult.localidad,
+            };
         }
 
         const actualizado = {
