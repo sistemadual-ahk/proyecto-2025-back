@@ -13,10 +13,6 @@
 ```bash
 # Windows (PowerShell)
 .\test-api.ps1
-
-# Linux/Mac
-chmod +x test-docker.sh
-./test-docker.sh
 ```
 
 ### Opción 2: Despliegue manual
@@ -85,9 +81,6 @@ AUTH0_DOMAIN=domain
 ```bash
 # Testing completo (Windows)
 .\test-api.ps1
-
-# Testing completo (Linux/Mac)
-./test-docker.sh
 
 # Desarrollo con hot reload
 docker-compose --profile dev up --build
@@ -300,7 +293,7 @@ echo "✅ Pruebas completadas"
 
 ## 📝 Notas Importantes
 
-1. **Testing**: Usar `.\test-api.ps1` (Windows) o `./test-docker.sh` (Linux/Mac) para testing completo
+1. **Testing**: Usar `.\test-api.ps1` (Windows) para testing completo
 2. **Variables de entorno**: Nunca committear archivos `.env` con credenciales
 3. **Logs**: Los logs muestran el estado de tsconfig-paths y conexión a MongoDB
 4. **Monitoreo**: Verificar logs con `docker-compose logs app | grep "✅"`
@@ -312,6 +305,6 @@ echo "✅ Pruebas completadas"
 Si encuentras problemas:
 1. Revisar logs: `docker-compose logs app`
 2. Verificar estado: `docker-compose ps`
-3. Ejecutar testing: `.\test-api.ps1` o `./test-docker.sh`
+3. Ejecutar testing: `.\test-api.ps1`
 4. Reconstruir: `docker-compose build --no-cache`
 5. Limpiar: `docker system prune -a` 
