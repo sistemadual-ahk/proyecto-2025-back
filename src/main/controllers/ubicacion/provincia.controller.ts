@@ -17,7 +17,6 @@ export class ProvinciaController extends BaseController {
     verificar = asyncHandler(async (_req: Request, res: Response) => {
         // Verifica query completo
         const { provincia, municipio, localidad } = _req.query;
-
         if (!provincia || !municipio || !localidad) {
             throw new ValidationError("Para verificar hace falta provincia, municipio y localidad");
         }
@@ -25,6 +24,9 @@ export class ProvinciaController extends BaseController {
         // Realiza validacion con DB
         const solicitudValida = await this.provinciaService.verificarUbicacionCompleta(String(provincia), String(municipio), String(localidad));
 
-        return this.sendSuccess(res, 200, { solicitudValida }, solicitudValida ? "Ubicacion verificada y existente" : "Ubicacion no encontrada");
+        // debug para mostrar
+        const debugMsgUbicacion = `${provincia} > ${municipio} > ${localidad}`;
+
+        return this.sendSuccess(res, 200, { solicitudValida }, solicitudValida ? `Ubicacion verificada y existente: ${debugMsgUbicacion}` : `Ubicación no encontrada: ${debugMsgUbicacion}`);
     });
 }
