@@ -16,7 +16,7 @@
 - [ ] `docker-compose.yml` configurado
 - [ ] `.dockerignore` completo
 - [ ] Scripts de despliegue
-- [ ] Scripts de testing (`test-api.ps1`, `test-docker.sh`)
+- [ ] Scripts de testing (`test-api.ps1`)
 
 ### ✅ Seguridad
 - [ ] Usuario no-root en Dockerfile
@@ -58,10 +58,6 @@ docker-compose down
 ```bash
 # Testing completo en Windows (PowerShell)
 .\test-api.ps1
-
-# Testing completo en Linux/Mac
-chmod +x test-docker.sh
-./test-docker.sh
 
 # Testing manual paso a paso
 docker-compose down

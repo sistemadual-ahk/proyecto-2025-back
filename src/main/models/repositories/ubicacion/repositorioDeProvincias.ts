@@ -1,5 +1,6 @@
 import { ProvinciaModel } from "../../schemas/ubicacion/provincia.schema";
 import { Provincia } from "../../entities/ubicacion/provincia";
+import { accentInsensitiveRegex } from "main/utils/regexAccent";
 
 export class RepositorioDeProvincias {
     private model: typeof ProvinciaModel;
@@ -14,12 +15,25 @@ export class RepositorioDeProvincias {
     }
 
     async exists(provincia: string, municipio: string, localidad: string): Promise<boolean> {
+        const provinciaRegex = accentInsensitiveRegex(provincia);
+        const municipioRegex = accentInsensitiveRegex(municipio);
+        const localidadRegex = accentInsensitiveRegex(localidad);
+        
         const result = await this.model.findOne({
-            nombre: provincia,
-            "municipios.nombre": municipio,
-            "municipios.localidades.nombre": localidad,
+            nombre: { $regex: provinciaRegex },
+            municipios: {
+                $elemMatch: {
+                    nombre: { $regex: municipioRegex },
+                    localidades: {
+                        $elemMatch: {
+                            nombre: { $regex: localidadRegex },
+                        },
+                    },
+                },
+            },
         });
         // operador para pasar a boolean
-        return Boolean(result);
+        console.log(result);
+        return !!result;
     }
 }

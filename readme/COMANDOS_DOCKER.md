@@ -6,10 +6,6 @@
 ```bash
 # Windows (PowerShell)
 .\test-api.ps1
-
-# Linux/Mac
-chmod +x test-docker.sh
-./test-docker.sh
 ```
 
 ### Encender servicios
@@ -75,9 +71,6 @@ docker-compose config
 ```bash
 # Testing completo (Windows)
 .\test-api.ps1
-
-# Testing completo (Linux/Mac)
-./test-docker.sh
 
 # Probar endpoint GET (PowerShell)
 Invoke-RestMethod -Uri "http://localhost:3000/api/saludos" -Method GET
@@ -298,7 +291,6 @@ echo "✅ Pruebas completadas"
 
 ### Para desarrollo diario:
 - [ ] `.\test-api.ps1` - Testing completo (Windows)
-- [ ] `./test-docker.sh` - Testing completo (Linux/Mac)
 - [ ] `docker-compose up --build` - Encender con logs en tiempo real
 - [ ] `docker-compose up -d` - Encender en segundo plano
 - [ ] `docker-compose logs -f app` - Ver logs
@@ -319,6 +311,5 @@ echo "✅ Pruebas completadas"
 
 ### Para testing:
 - [ ] `.\test-api.ps1` - Testing completo en Windows
-- [ ] `./test-docker.sh` - Testing completo en Linux/Mac
 - [ ] `curl http://localhost:3000/api/saludos` - Probar API
 - [ ] `docker-compose logs app | grep "✅"` - Verificar logs de éxito 

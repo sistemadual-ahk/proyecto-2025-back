@@ -8,6 +8,8 @@ import { telegramController } from "./config/dependencies";
 
 const cors = require('cors');
 
+const estadoBot = process.env['ACTIVAR_BOT_TELEGRAM'];
+
 const app = express();
 app.set("trust proxy", true);
 app.use(express.json());
@@ -36,7 +38,12 @@ app.use('/api', checkJwt, syncUser);
 
 routes.forEach(route => app.use(route.path, route.handler));
 
-telegramController.startBot();
+if(estadoBot?.toLocaleLowerCase() === 'true'){
+  telegramController.startBot();
+  console.log("🤖 Bot de Telegram ACTIVADO...")
+} else{
+  console.log("❌ Bot de Telegram DESACTIVADO...");
+}
 
 app.use(errorHandler);
 
