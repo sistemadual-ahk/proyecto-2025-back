@@ -6,10 +6,6 @@ const provinciaSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    poblacion: {
-        type: Number,
-        required: false,
-    },
     municipios: [
         {
             nombre: {
@@ -30,4 +26,4 @@ const provinciaSchema = new mongoose.Schema({
 
 provinciaSchema.loadClass(Provincia);
 
-export const ProvinciaModel = mongoose.model("provincias", provinciaSchema);
+export const ProvinciaModel = mongoose.model("Provincia", provinciaSchema, "provincias");
