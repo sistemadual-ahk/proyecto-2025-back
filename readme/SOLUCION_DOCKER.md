@@ -46,13 +46,7 @@ AUTH0_DOMAIN=domain
 .\test-api.ps1
 ```
 
-### Opción 2: Usando Bash (Linux/Mac)
-```bash
-chmod +x test-docker.sh
-./test-docker.sh
-```
-
-### Opción 3: Manual
+### Opción 2: Manual
 ```bash
 # Detener contenedores
 docker-compose down

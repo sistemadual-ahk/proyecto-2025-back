@@ -3,39 +3,49 @@ version: '3.8'
 services:
   app:
     build: .
-    ports:
-      - "3001:3000"
     env_file:
       - .env
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=3000
     restart: unless-stopped
     networks:
-      - app-network
+      - web
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.back-gastify.entrypoints=websecure"
+      - "traefik.http.routers.back-gastify.rule=Host(`back-gastify.labo.disilab.cpci.org.ar`)"
+      - "traefik.http.routers.back-gastify.tls=true"
+      - "traefik.http.routers.back-gastify.tls.certresolver=leresolver"
+      # (Opcional pero recomendable) fija el puerto interno si tu imagen expone varios
+      - "traefik.http.services.back-gastify.loadbalancer.server.port=3000"
 
-  # Servicio para desarrollo (opcional)
+  # Servicio de desarrollo local (no para el servidor)
   app-dev:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile.dev
-    ports:
-      - "3002:3000"
     env_file:
       - .env
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - MONGODB_DB_NAME=dummy
     volumes:
       - ./src:/app/src
       - ./package.json:/app/package.json
     restart: unless-stopped
     networks:
       - app-network
+    ports:
+      - "3002:3000"
     profiles:
       - dev
 
 networks:
   app-network:
-    driver: bridge 
+      driver: bridge
+  web:
+    external: true
