@@ -1,13 +1,14 @@
 import { Usuario } from "@models/entities/usuario";
 import { RepositorioDeUsuarios } from "@models/repositories/repositorioDeUsuarios";
 import { ValidationError, NotFoundError, ConflictError } from "../middlewares/error.middleware";
+import { ProvinciaService } from "./ubicacion/provincia.service";
 
 export class UsuarioService {
-    constructor(private usuarioRepository: RepositorioDeUsuarios) {}
+    constructor(private usuarioRepository: RepositorioDeUsuarios, private provinciaService: ProvinciaService) {}
 
     async findAll() {
         const usuarios = await this.usuarioRepository.findAll();
-        return usuarios.map(u => this.toDTO(u));
+        return usuarios.map((u) => this.toDTO(u));
     }
 
     async findById(id: string) {
@@ -24,7 +25,7 @@ export class UsuarioService {
 
     async create(usuarioData: Partial<Usuario>) {
         const { name, mail, auth0Id } = usuarioData;
-        if (!name || !mail || !auth0Id ) throw new ValidationError('Todos los campos son requeridos');
+        if (!name || !mail || !auth0Id) throw new ValidationError("Todos los campos son requeridos");
 
         const existente = await this.usuarioRepository.findByEmail(mail.trim().toLowerCase());
         if (existente) throw new ConflictError(`Ya existe un usuario con el mail ${mail}`);
@@ -39,14 +40,38 @@ export class UsuarioService {
     }
 
     async update(id: string, usuarioData: Partial<Usuario>) {
+        // verificar existencia
         const usuarioExistente = await this.usuarioRepository.findById(id);
         if (!usuarioExistente) throw new NotFoundError(`Usuario con id ${id} no encontrado`);
 
-        const { name, mail, password, phoneNumber } = usuarioData;
+        const { name, mail, password, phoneNumber, ubicacion } = usuarioData;
 
+        console.log("ProvinciaService:", this.provinciaService);
+
+        // Actualizar email
         if (mail && mail !== usuarioExistente.mail) {
             const existente = await this.usuarioRepository.findByEmail(mail.trim().toLowerCase());
             if (existente) throw new ConflictError(`Ya existe un usuario con el mail ${mail}`);
+        }
+
+        let nuevaUbicacion = usuarioExistente.ubicacion;
+
+        if (ubicacion) {
+            const { provincia, municipio, localidad } = ubicacion;
+            const ubicacionCompleta = provincia && municipio && localidad;
+
+            if (!ubicacionCompleta) {
+                throw new ValidationError("Debe elegir Provincia + Municipio + Localidad para modificar ubicacion");
+            }
+
+            // suponiendo que esta completa:
+            const existeUbicacion = await this.provinciaService.verificarUbicacionCompleta(provincia, municipio, localidad);
+
+            if (!existeUbicacion) {
+                const debugMsgUbicacion = `${provincia} > ${municipio} > ${localidad}`;
+                throw new ValidationError(`La combinacion ${debugMsgUbicacion} no existe.`);
+            }
+            nuevaUbicacion = ubicacion;
         }
 
         const actualizado = {
@@ -54,7 +79,8 @@ export class UsuarioService {
             name: name?.trim() || usuarioExistente.name,
             mail: mail?.trim().toLowerCase() || usuarioExistente.mail,
             phoneNumber: phoneNumber || usuarioExistente.phoneNumber,
-            password: password || usuarioExistente.password
+            password: password || usuarioExistente.password,
+            ubicacion: nuevaUbicacion,
         };
 
         const resultado = await this.usuarioRepository.save(actualizado);
@@ -64,17 +90,18 @@ export class UsuarioService {
     async delete(id: string) {
         const deleted = await this.usuarioRepository.deleteById(id);
         if (!deleted) throw new NotFoundError(`Usuario con id ${id} no encontrado`);
-        return { success: true, message: 'Usuario eliminado correctamente' };
+        return { success: true, message: "Usuario eliminado correctamente" };
     }
 
     private toDTO(usuario: Usuario) {
         return {
             id: usuario.id || (usuario as any)._id,
             authId: usuario.auth0Id,
-            telegramId: usuario.telegramId, 
+            telegramId: usuario.telegramId,
             name: usuario.name,
             mail: usuario.mail,
-            phoneNumber: usuario.phoneNumber
+            phoneNumber: usuario.phoneNumber,
+            ubicacion: usuario.ubicacion || null,
         };
     }
 }

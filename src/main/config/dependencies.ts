@@ -19,7 +19,6 @@ import { ProvinciaController } from "@controllers/ubicacion/provincia.controller
 // Importaciones de Clases de Repositorios
 import { RepositorioDeBilleteras, RepositorioDeObjetivos, RepositorioDeOperaciones, RepositorioDeUsuarios, RepositorioDeCategorias, RepositorioDeProvincias } from "@models/repositories";
 
-
 // --- REPOSITORIOS (Instanciación) ---
 export const categoriaRepo = new RepositorioDeCategorias();
 export const operacionRepo = new RepositorioDeOperaciones();
@@ -28,22 +27,21 @@ export const objetivoRepo = new RepositorioDeObjetivos();
 export const usuarioRepo = new RepositorioDeUsuarios();
 export const provinciaRepo = new RepositorioDeProvincias();
 
-
 // --- SERVICIOS (Instanciación) ---
 export const categoriaService = new CategoriaService(categoriaRepo, usuarioRepo);
 export const operacionService = new OperacionService(operacionRepo, categoriaRepo, billeteraRepo, usuarioRepo);
 export const billeteraService = new BilleteraService(billeteraRepo, usuarioRepo);
 export const objetivoService = new ObjetivoService(objetivoRepo, usuarioRepo, billeteraRepo, categoriaRepo);
-export const usuarioService = new UsuarioService(usuarioRepo);
 export const openaiService = new OpenAIService(operacionRepo, categoriaService);
 export const provinciaService = new ProvinciaService(provinciaRepo);
-
+// movido abajo xq usuario utiliza ubicacion de provincia
+export const usuarioService = new UsuarioService(usuarioRepo, provinciaService);
 
 // --- CONTROLADORES (Instanciación) ---
-export const categoriaController = new CategoriaController(categoriaService); 
-export const operacionController = new OperacionController(operacionService); 
-export const billeteraController = new BilleteraController(billeteraService); 
-export const objetivoController = new ObjetivoController(objetivoService); 
-export const usuarioController = new UsuarioController(usuarioService); 
+export const categoriaController = new CategoriaController(categoriaService);
+export const operacionController = new OperacionController(operacionService);
+export const billeteraController = new BilleteraController(billeteraService);
+export const objetivoController = new ObjetivoController(objetivoService);
+export const usuarioController = new UsuarioController(usuarioService);
 export const telegramController = new TelegramController(openaiService, categoriaService, billeteraService, usuarioService);
 export const provinciaController = new ProvinciaController(provinciaService);
