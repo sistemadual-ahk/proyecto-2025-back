@@ -46,7 +46,7 @@ export class UsuarioService {
 
         const { name, mail, password, phoneNumber, sueldo, profesion, estadoCivil, ubicacion } = usuarioData;
 
-        console.log("ProvinciaService:", this.provinciaService);
+        // console.log("ProvinciaService:", this.provinciaService);
 
         // Actualizar email
         if (mail && mail !== usuarioExistente.mail) {
@@ -112,6 +112,9 @@ export class UsuarioService {
             name: usuario.name,
             mail: usuario.mail,
             phoneNumber: usuario.phoneNumber,
+            sueldo: usuario.sueldo,
+            profesion: usuario.profesion,
+            estadoCivil: usuario.estadoCivil,
             ubicacion: usuario.ubicacion || null,
         };
     }
