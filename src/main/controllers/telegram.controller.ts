@@ -9,14 +9,17 @@ import { TipoOperacion } from '@models/entities/tipoOperacion';
 import { BilleteraService } from '@services/billetera.service';
 import { UsuarioService } from '@services/usuario.service';
 import { CategoriaDto } from '../dtos/categoriaDto';
+import { billeteraDto } from '../dtos/billeteraDto';
 
 interface UserSession {
     modoEdicion: boolean;
-    estado?: 'esperando_monto' | 'esperando_fecha' | 'esperando_descripcion' | 'esperando_categoria' | 'menu_principal';
-    campo?: 'monto' | 'fecha' | 'categoria' | 'descripcion';
+    estado?: 'esperando_monto' | 'esperando_fecha' | 'esperando_descripcion' | 'esperando_categoria' | 'esperando_billetera' |'menu_principal';
+    campo?: 'monto' | 'fecha' | 'categoria' | 'descripcion'| 'billetera';
     monto?: number | string;
     fecha?: string;
-    categoria?: string; 
+    categoria?: string;
+    billeteraDefault?: string; 
+    billetera?: string
     descripcion?: string;
     telefono?: string;
     originalMessageId?: number; 
@@ -34,6 +37,7 @@ export class TelegramController extends BaseController {
     private getDatosMensaje(datos: UserSession, titulo: string, incluirBotones: boolean = false): { text: string, reply_markup?: any } {
         const text = `${titulo}\n\n` +
             `💰 Monto: ${datos.monto ?? '❌ Sin dato'}\n` +
+            `💳 Billetera: ${datos.billetera ?? '❌ Sin dato'}\n` +
             `📅 Fecha: ${datos.fecha ?? '❌ Sin dato'}\n` +
             `📂 Categoría: ${datos.categoria ?? '❌ Sin dato'}\n` +
             `📝 Descripción: ${datos.descripcion ?? '❌ Sin dato'}\n\n`;
@@ -142,8 +146,6 @@ export class TelegramController extends BaseController {
             tipo: TipoOperacion.EGRESO,
         };
     }
-    
-    // --- FUNCIONES DEL BOT ---
 
     async startBot() {
         const bot = new TelegramBot(token, { polling: true });
@@ -177,6 +179,9 @@ export class TelegramController extends BaseController {
                             { text: '✅ Confirmar Cambios', callback_data: 'confirmar_edicion' }, 
                             { text: '❌ Cancelar Edición', callback_data: 'cancelar_edicion' },
                         ],
+                        [
+                            { text: '💳 Billetera' , callback_data: 'editar_billetera'},
+                        ],
                     ],
                 },
             });
@@ -208,6 +213,31 @@ export class TelegramController extends BaseController {
                 mostrarMenuEdicion(bot, chatId, userSessions[chatId]!); 
             }
         };
+
+        const mostrarMenuBilleteras = async (bot: TelegramBot, chatId: number, usuarioId: string) => {
+            try{
+               const billeteras: billeteraDto[] = await this.billeteraService.findAllForUser(usuarioId);
+               const botonesBilleteras = billeteras.map((billetera: billeteraDto) => {
+                return [{
+                    text: `${billetera.nombre} ${billetera.balance}`,
+                    callback_data: `select_wall:${billetera.nombre}`
+                }]
+               });
+               
+               await bot.sendMessage(chatId, '💳 Selecciona la billetera', {
+                    reply_markup: {
+                        inline_keyboard: botonesBilleteras
+                    }
+               });
+
+               userSessions[chatId]!.estado = 'esperando_billetera';
+               userSessions[chatId]!.campo = 'billetera';
+
+            }catch(e){
+                console.error('❌ Hubo un error al obtener billeteras',e);
+                mostrarMenuEdicion(bot, chatId, userSessions[chatId]!); 
+            }
+        }      
 
         const manejarValidacionMonto = async (chatId: number, nuevoValor: string, session: UserSession) => {
             const montoNumerico = this.chequearMontoDesdeMensaje(nuevoValor);
@@ -271,6 +301,7 @@ export class TelegramController extends BaseController {
                 return;
             }
             if (session?.estado === 'esperando_categoria') return;
+            if(session?.estado === 'esperando_billetera') return;
             try {
                 let tipo: 'texto' | 'audio' | 'imagen';
                 let contenido: string;
@@ -331,6 +362,8 @@ export class TelegramController extends BaseController {
         bot.on('callback_query', async (query) => {
             const chatId = query.message!.chat.id;
             const messageId = query.message!.message_id; 
+            const userIdTelegram = query.message?.from?.id;
+            const user = this.usuarioService.findByTelegramId(String(userIdTelegram));
             if (!chatId) return;
 
             const data = query.data;
@@ -343,7 +376,6 @@ export class TelegramController extends BaseController {
             }
             
             const originalMessageId = sessionData.originalMessageId;
-
 
             if (data === 'confirmar') {
                 if (!this.datosCompletos(sessionData)) {
@@ -424,13 +456,15 @@ export class TelegramController extends BaseController {
                 await bot.sendMessage(chatId, '❌ Edición cancelada, volviendo al borrador original.');
             }
             else if (data.startsWith('editar_')) {
-                const campo = data.replace('editar_', '') as 'monto' | 'fecha' | 'categoria' | 'descripcion';
+                const campo = data.replace('editar_', '') as 'monto' | 'fecha' | 'categoria' | 'descripcion' | 'billetera';
                 
                 await bot.deleteMessage(chatId, messageId).catch(console.error); 
                 
                 if (campo === 'categoria') {
                     mostrarMenuCategorias(bot, chatId);
-                } else {
+                } else if(campo === 'billetera'){
+                    mostrarMenuBilleteras(bot, chatId, (await user).id)
+                }else {
                     sessionData.estado = `esperando_${campo}` as UserSession['estado'];
                     sessionData.campo = campo;
                     let prompt = '';
@@ -454,14 +488,27 @@ export class TelegramController extends BaseController {
                 await bot.deleteMessage(chatId, messageId).catch(console.error); 
 
                 sessionData.categoria = categoriaNombre;
+                sessionData.billetera = undefined
                 sessionData.estado = undefined;
                 sessionData.campo = undefined;
                 sessionData.modoEdicion = true;
 
                 await bot.sendMessage(chatId, `✅ Categoría actualizada. Nuevo valor: *${categoriaNombre}*`, { parse_mode: 'Markdown' });
                 mostrarMenuEdicion(bot, chatId, sessionData);
-            }
+            } 
+            else if(data.startsWith('select_wall:')){
+                const billeteraNombre = data.substring('select_wall:'.length);
 
+                await bot.deleteMessage(chatId, messageId).catch(console.error);
+
+                sessionData.billetera = billeteraNombre;
+                sessionData.categoria = undefined;
+                sessionData.estado = undefined;
+                sessionData.campo = undefined;
+                sessionData.modoEdicion = true;
+
+                await bot.sendMessage(chatId, `Billetera actualizada- Nuevo valor: *${billeteraNombre}*`, { parse_mode: `Markdown`})
+            }
             bot.answerCallbackQuery(query.id);
         });
     }
