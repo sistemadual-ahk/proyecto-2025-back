@@ -40,6 +40,21 @@ const usuarioSchema = new mongoose.Schema(
             municipio: { type: String, required: false, trim: true },
             localidad: { type: String, required: false, trim: true },
         },
+        sueldo: {
+            type: Number,
+            required: false,
+            min: 0,
+        },
+        profesion: {
+            type: String,
+            required: false,
+            trim: true,
+        },
+        estadoCivil: {
+            type: String,
+            required: false,
+            trim: true,
+        },
     },
     {
         timestamps: true,

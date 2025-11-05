@@ -44,7 +44,7 @@ export class UsuarioService {
         const usuarioExistente = await this.usuarioRepository.findById(id);
         if (!usuarioExistente) throw new NotFoundError(`Usuario con id ${id} no encontrado`);
 
-        const { name, mail, password, phoneNumber, ubicacion } = usuarioData;
+        const { name, mail, password, phoneNumber, sueldo, profesion, estadoCivil, ubicacion } = usuarioData;
 
         console.log("ProvinciaService:", this.provinciaService);
 
@@ -66,12 +66,8 @@ export class UsuarioService {
 
             // suponiendo que esta completa:
             // Verificar en base de datos (nuevo formato)
-                        // Verificar en base de datos (nuevo formato)
-            const ubicacionResult = await this.provinciaService.verificarUbicacionCompleta(
-                provincia,
-                municipio,
-                localidad
-            );
+            // Verificar en base de datos (nuevo formato)
+            const ubicacionResult = await this.provinciaService.verificarUbicacionCompleta(provincia, municipio, localidad);
 
             if (!ubicacionResult.exists) {
                 const debugMsgUbicacion = `${provincia} > ${municipio} > ${localidad}`;
@@ -92,6 +88,9 @@ export class UsuarioService {
             mail: mail?.trim().toLowerCase() || usuarioExistente.mail,
             phoneNumber: phoneNumber || usuarioExistente.phoneNumber,
             password: password || usuarioExistente.password,
+            sueldo: sueldo || usuarioExistente.sueldo,
+            estadoCivil: estadoCivil || usuarioExistente.estadoCivil,
+            profesion: profesion || usuarioExistente.profesion,
             ubicacion: nuevaUbicacion,
         };
 
