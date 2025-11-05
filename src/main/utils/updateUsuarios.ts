@@ -1,75 +1,95 @@
 import axios from "axios";
+import * as path from "path";
+import * as dotenv from "dotenv";
 
-// 🧠 Interfaces para tipar tus datos
+// 🧩 Load .env from two folders up
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+
+// 🧠 Interfaces
 interface Profesion {
     _id?: string;
     nombre: string;
 }
 
 interface Usuario {
-    _id: string;
-    nombre: string;
+    id: string;
+    name: string;
     profesion?: string;
     estadoCivil?: string;
     sueldo?: number;
 }
 
-// 🌐 Base URL de tu API
+// 🌐 Configuración general
 const API_BASE = "http://localhost:3000/api";
 
-// 🎲 Funciones auxiliares
-function randomFrom<T>(arr: T[]): T {
-    if (arr.length === 0) {
-        throw new Error("El array está vacío, no se puede elegir un elemento aleatorio.");
-    }
+// 🔑 Token desde .env
+const AUTH_TOKEN = process.env["API_TOKEN"];
+if (!AUTH_TOKEN) {
+    console.error("❌ No se encontró API_TOKEN en el archivo .env (dos carpetas arriba).");
+    process.exit(1);
+}
 
+// ⚙️ Axios instance
+const api = axios.create({
+    baseURL: API_BASE,
+    headers: {
+        Authorization: `Bearer ${AUTH_TOKEN}`,
+        "Content-Type": "application/json",
+    },
+});
+
+// 🎲 Helpers
+function randomFrom<T>(arr: readonly T[]): T {
+    if (arr.length === 0) throw new Error("El array está vacío, no se puede seleccionar un elemento aleatorio.");
     const index = Math.floor(Math.random() * arr.length);
     return arr[index] as T;
 }
 
-const randomSueldo = () => Math.floor(Math.random() * 300000) + 200000;
+function randomSueldo(): number {
+    return Math.floor(Math.random() * 300000) + 100000; // 100k–400k
+}
 
+// 🚀 Main
 async function updateUsuarios() {
     try {
-        // 1️⃣ Obtener todas las profesiones desde tu API
-        const profesionesRes = await axios.get<{ success?: boolean; data: Profesion[] }>(`${API_BASE}/profesiones`);
+        console.log("🔄 Obteniendo profesiones...");
+        const profesionesRes = await api.get<{ success?: boolean; data: Profesion[] }>("/profesiones");
         const profesiones = profesionesRes.data.data || profesionesRes.data;
         const profesionesNombres = profesiones.map((p) => p.nombre);
+        console.log(`📚 Profesiones cargadas: ${profesionesNombres.length}\n`);
 
-        console.log(`📚 Profesiones cargadas: ${profesionesNombres.length}`);
-
-        // 2️⃣ Obtener todos los usuarios
-        const usuariosRes = await axios.get<{ success?: boolean; data: Usuario[] }>(`${API_BASE}/usuarios`);
+        console.log("👥 Obteniendo usuarios...");
+        const usuariosRes = await api.get<{ success?: boolean; data: Usuario[] }>("/usuarios");
         const usuarios = usuariosRes.data.data || usuariosRes.data;
+        console.log(`👤 Usuarios encontrados: ${usuarios.length}\n`);
 
-        console.log(`👥 Usuarios encontrados: ${usuarios.length}\n`);
-
-        // 3️⃣ Estados civiles posibles
         const estadosCiviles = ["Soltero", "Casado", "Divorciado", "Viudo", "Unión Libre"];
 
-        // 4️⃣ Iterar y actualizar usuarios
         for (const user of usuarios) {
-            // Saltar si ya tiene datos completos
-            if (user.profesion && user.estadoCivil && user.sueldo) {
-                console.log(`⏭️ ${user.nombre} ya tiene datos, se omite.`);
+            if (!user.id) {
+                console.warn(`⚠️ Usuario sin ID válido: ${user.name}`);
                 continue;
             }
 
             const payload = {
-                sueldo: user.sueldo || randomSueldo(),
-                estadoCivil: user.estadoCivil || randomFrom(estadosCiviles),
-                profesion: user.profesion || randomFrom(profesionesNombres),
+                sueldo: user.sueldo ?? randomSueldo(),
+                estadoCivil: user.estadoCivil ?? randomFrom(estadosCiviles),
+                profesion: user.profesion ?? randomFrom(profesionesNombres),
             };
 
-            await axios.put(`${API_BASE}/usuarios/${user._id}`, payload);
-            console.log(`✔️ ${user.nombre} actualizado con ${payload.profesion}, ${payload.estadoCivil}, ${payload.sueldo}`);
+            try {
+                await api.put(`/usuarios/${user.id}`, payload);
+                console.log(`✔️ ${user.name.padEnd(25)} → ${payload.profesion}, ${payload.estadoCivil}, $${payload.sueldo}`);
+            } catch (innerErr: any) {
+                console.warn(`⚠️ Error actualizando ${user.name}:`, innerErr.response?.data || innerErr.message);
+            }
         }
 
-        console.log("\n✅ Actualización completa.");
+        console.log("\n✅ Todos los usuarios fueron actualizados correctamente.");
     } catch (err: any) {
-        console.error("❌ Error:", err.response?.data || err.message);
+        console.error("❌ Error general:", err.response?.data || err.message);
     }
 }
 
-// 🚀 Ejecutar
+// 🏁 Run
 updateUsuarios();
