@@ -175,13 +175,14 @@ export class TelegramController extends BaseController {
                             { text: '📝 Descripción', callback_data: 'editar_descripcion' },
                         ],
                         [
+                            { text: '💳 Billetera' , callback_data: 'editar_billetera'},
+                        ],
+                        [
                            
                             { text: '✅ Confirmar Cambios', callback_data: 'confirmar_edicion' }, 
                             { text: '❌ Cancelar Edición', callback_data: 'cancelar_edicion' },
                         ],
-                        [
-                            { text: '💳 Billetera' , callback_data: 'editar_billetera'},
-                        ],
+                        
                     ],
                 },
             });
@@ -217,6 +218,7 @@ export class TelegramController extends BaseController {
         const mostrarMenuBilleteras = async (bot: TelegramBot, chatId: number, usuarioId: string) => {
             try{
                const billeteras: billeteraDto[] = await this.billeteraService.findAllForUser(usuarioId);
+               console.log(billeteras)
                const botonesBilleteras = billeteras.map((billetera: billeteraDto) => {
                 return [{
                     text: `${billetera.nombre} ${billetera.balance}`,
