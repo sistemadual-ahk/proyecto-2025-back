@@ -52,6 +52,7 @@ export class UsuarioController extends BaseController {
     getSimilarUsuarioByUbicacion = asyncHandler(async (req: Request, res: Response) => {
         const { provincia, municipio, localidad, id, count, exactitud } = req.query;
         const cantUsuarios = count ? Number(count) : 1;
+        const exactitudValue = exactitud ? String(exactitud) : "provincia";
 
         if (!provincia || !municipio || !localidad || !id) {
             throw new ValidationError("Ubicación completa e ID son requeridos");
@@ -63,7 +64,7 @@ export class UsuarioController extends BaseController {
             localidad: localidad as string,
         };
 
-        const usuario = await this.usuarioService.findSimilarByUbicacion(ubicacion, String(id), cantUsuarios, String(exactitud));
+        const usuario = await this.usuarioService.findSimilarByUbicacion(ubicacion, String(id), cantUsuarios, exactitudValue);
 
         return this.sendSuccess(res, 200, usuario, "Usuario similar encontrado exitosamente");
     });
