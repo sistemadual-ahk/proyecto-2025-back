@@ -218,7 +218,8 @@ export class TelegramController extends BaseController {
         const mostrarMenuBilleteras = async (bot: TelegramBot, chatId: number, usuarioId: string) => {
             try{
                const billeteras: billeteraDto[] = await this.billeteraService.findAllForUser(usuarioId);
-               console.log(billeteras)
+               console.log(usuarioId);
+               console.log(billeteras);
                const botonesBilleteras = billeteras.map((billetera: billeteraDto) => {
                 return [{
                     text: `${billetera.nombre} ${billetera.balance}`,
@@ -365,7 +366,8 @@ export class TelegramController extends BaseController {
             const chatId = query.message!.chat.id;
             const messageId = query.message!.message_id; 
             const userIdTelegram = query.message?.from?.id;
-            const user = this.usuarioService.findByTelegramId(String(userIdTelegram));
+            const user = await this.usuarioService.findByTelegramId(String(userIdTelegram));
+            
             if (!chatId) return;
 
             const data = query.data;
@@ -465,7 +467,7 @@ export class TelegramController extends BaseController {
                 if (campo === 'categoria') {
                     mostrarMenuCategorias(bot, chatId);
                 } else if(campo === 'billetera'){
-                    mostrarMenuBilleteras(bot, chatId, (await user).id)
+                    mostrarMenuBilleteras(bot, chatId, user.authId)
                 }else {
                     sessionData.estado = `esperando_${campo}` as UserSession['estado'];
                     sessionData.campo = campo;
