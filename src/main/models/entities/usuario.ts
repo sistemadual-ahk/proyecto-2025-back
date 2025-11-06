@@ -15,3 +15,7 @@ export class Usuario {
     profesion?: string | null;
     estadoCivil?: string | null;
 }
+
+export class UsuarioWithMatchBy extends Usuario {
+    matchBy: "provincia" | "municipio" | "localidad";
+}

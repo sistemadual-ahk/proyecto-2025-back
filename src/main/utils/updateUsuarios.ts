@@ -46,7 +46,7 @@ function randomFrom<T>(arr: readonly T[]): T {
 }
 
 function randomSueldo(): number {
-    return Math.floor(Math.random() * 300000) + 100000; // 100k–400k
+    return Math.floor(Math.random() * 3800000) + 200000;
 }
 
 // 🚀 Main
@@ -63,7 +63,7 @@ async function updateUsuarios() {
         const usuarios = usuariosRes.data.data || usuariosRes.data;
         console.log(`👤 Usuarios encontrados: ${usuarios.length}\n`);
 
-        const estadosCiviles = ["Soltero", "Casado", "Divorciado", "Viudo", "Unión Libre"];
+        const estadosCiviles = ["Soltero", "Casado", "Divorciado", "Viudo"];
 
         for (const user of usuarios) {
             if (!user.id) {

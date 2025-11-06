@@ -1,7 +1,14 @@
-import { Usuario } from "@models/entities/usuario";
+import { Usuario, UsuarioWithMatchBy } from "@models/entities/usuario";
 import { RepositorioDeUsuarios } from "@models/repositories/repositorioDeUsuarios";
 import { ValidationError, NotFoundError, ConflictError } from "../middlewares/error.middleware";
 import { ProvinciaService } from "./ubicacion/provincia.service";
+import { ubicacionToDebugString } from "main/utils/debugUtils";
+
+interface Ubicacion {
+    provincia: string;
+    municipio: string;
+    localidad: string;
+}
 
 export class UsuarioService {
     constructor(private usuarioRepository: RepositorioDeUsuarios, private provinciaService: ProvinciaService) {}
@@ -21,6 +28,36 @@ export class UsuarioService {
         const usuario = await this.usuarioRepository.findByTelegramId(telegramId);
         if (!usuario) throw new NotFoundError(`Usuario con id ${telegramId} no encontrado`);
         return this.toDTO(usuario);
+    }
+
+    async findSimilarBySueldo(sueldo: number, id: string, count: number = 1) {
+        const usuarios = await this.usuarioRepository.findSimilarBySueldo(sueldo, id, count);
+        if (!usuarios) throw new NotFoundError(`Usuario similar con sueldo cercano a ${sueldo} no encontrado`);
+        return usuarios.map((u) => this.toDTO(u));
+    }
+    async findSimilarByProfesion(profesion: string, id: string, count: number = 1) {
+        const usuarios = await this.usuarioRepository.findSimilarByProfesion(profesion, id, count);
+        if (!usuarios) throw new NotFoundError(`Usuario similar con profesion ${profesion} no encontrado`);
+        return usuarios.map((u) => this.toDTO(u));
+    }
+
+    async findSimilarByUbicacion(ubicacion: Ubicacion, id: string, count: number = 1, exactitud: string = "provincia") {
+        const usuarios = await this.usuarioRepository.findSimilarByUbicacion(ubicacion, id, count, exactitud);
+
+        const allowedExactitud = new Set(["provincia", "municipio", "localidad"]);
+        if (!allowedExactitud.has(exactitud)) {
+            throw new ValidationError(`Valor de "exactitud" inválido: ${exactitud}. Debe ser "provincia", "municipio" o "localidad".`);
+        }
+
+        if (!usuarios) throw new NotFoundError(`Usuario similar con ubicacion ${ubicacionToDebugString(ubicacion)} no encontrado`);
+
+        return usuarios.map((u: UsuarioWithMatchBy) => {
+            const { matchBy, ...rest } = u;
+            return {
+                ...this.toDTO(rest),
+                matchBy,
+            };
+        });
     }
 
     async create(usuarioData: Partial<Usuario>) {
