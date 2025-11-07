@@ -3,6 +3,9 @@ import { RepositorioDeUsuarios } from "@models/repositories/repositorioDeUsuario
 import { ValidationError, NotFoundError, ConflictError } from "../middlewares/error.middleware";
 import { ProvinciaService } from "./ubicacion/provincia.service";
 import { ubicacionToDebugString } from "main/utils/debugUtils";
+import { OperacionService } from "./operacion.service";
+import { CategoriaService } from "./categoria.service";
+import { ComparacionUsuarioDto, ComparacionUsuariosResponseDto, CategoriaComparacionDto } from "../dtos/comparacionUsuarioDto";
 
 interface Ubicacion {
     provincia: string;
@@ -11,7 +14,12 @@ interface Ubicacion {
 }
 
 export class UsuarioService {
-    constructor(private usuarioRepository: RepositorioDeUsuarios, private provinciaService: ProvinciaService) {}
+    constructor(
+        private usuarioRepository: RepositorioDeUsuarios, 
+        private provinciaService: ProvinciaService,
+        private operacionService: OperacionService,
+        private categoriaService: CategoriaService
+    ) {}
 
     async findAll() {
         const usuarios = await this.usuarioRepository.findAll();
@@ -139,6 +147,138 @@ export class UsuarioService {
         const deleted = await this.usuarioRepository.deleteById(id);
         if (!deleted) throw new NotFoundError(`Usuario con id ${id} no encontrado`);
         return { success: true, message: "Usuario eliminado correctamente" };
+    }
+
+    async compararUsuarios(usuarioActualId: string, usuarioCompararId: string, mes?: number, año?: number): Promise<ComparacionUsuariosResponseDto> {
+        // Validar que ambos usuarios existan
+        const usuarioActual = await this.usuarioRepository.findById(usuarioActualId);
+        if (!usuarioActual) throw new NotFoundError(`Usuario actual con id ${usuarioActualId} no encontrado`);
+
+        const usuarioComparar = await this.usuarioRepository.findById(usuarioCompararId);
+        if (!usuarioComparar) throw new NotFoundError(`Usuario a comparar con id ${usuarioCompararId} no encontrado`);
+
+        // Calcular fechas del mes (si no se proporcionan, usar el mes actual)
+        const fechaActual = new Date();
+        const mesActual = mes !== undefined ? mes : fechaActual.getMonth() + 1; // getMonth() devuelve 0-11
+        const añoActual = año !== undefined ? año : fechaActual.getFullYear();
+
+        // Primer día del mes
+        const desde = new Date(añoActual, mesActual - 1, 1);
+        // Último día del mes
+        const hasta = new Date(añoActual, mesActual, 0, 23, 59, 59, 999);
+
+        // Obtener operaciones de ambos usuarios del mes (solo egresos/gastos)
+        const operacionesActual = await this.operacionService.findByFilters({
+            userId: usuarioActualId,
+            tipo: "Egreso",
+            desde: desde.toISOString(),
+            hasta: hasta.toISOString(),
+        });
+
+        const operacionesComparar = await this.operacionService.findByFilters({
+            userId: usuarioCompararId,
+            tipo: "Egreso",
+            desde: desde.toISOString(),
+            hasta: hasta.toISOString(),
+        });
+
+        // Obtener todas las categorías default para ambos usuarios
+        const categoriasActual = await this.categoriaService.findAllForUser(usuarioActualId);
+        const categoriasComparar = await this.categoriaService.findAllForUser(usuarioCompararId);
+
+        // Filtrar solo categorías default
+        const categoriasDefault = categoriasActual.filter(c => c.isDefault);
+
+        // Procesar datos del usuario actual
+        const datosActual = this.procesarDatosUsuario(
+            usuarioActual,
+            operacionesActual,
+            categoriasDefault,
+            true // incluir nombre
+        );
+
+        // Procesar datos del usuario a comparar
+        const datosComparar = this.procesarDatosUsuario(
+            usuarioComparar,
+            operacionesComparar,
+            categoriasDefault,
+            false // no incluir nombre
+        );
+
+        return {
+            usuarios: [datosActual, datosComparar],
+        };
+    }
+
+    private procesarDatosUsuario(
+        usuario: Usuario,
+        operaciones: any[],
+        categoriasDefault: any[],
+        incluirNombre: boolean
+    ): ComparacionUsuarioDto {
+        // Agrupar operaciones por categoría y calcular montos totales
+        const categoriasMap = new Map<string, { nombre: string; montoTotal: number }>();
+
+        // Inicializar todas las categorías default con monto 0
+        categoriasDefault.forEach(cat => {
+            const catId = cat.id || (cat as any)._id?.toString() || String((cat as any)._id);
+            if (catId) {
+                categoriasMap.set(catId, {
+                    nombre: cat.nombre,
+                    montoTotal: 0,
+                });
+            }
+        });
+
+        // Procesar operaciones y sumar montos por categoría
+        let primeraFecha: Date | null = null;
+        let ultimaFecha: Date | null = null;
+
+        operaciones.forEach(op => {
+            const categoria = op.categoria;
+            if (!categoria) return;
+
+            const catId = categoria.id || (categoria as any)._id?.toString() || String((categoria as any)._id);
+            if (catId && categoriasMap.has(catId)) {
+                const categoriaData = categoriasMap.get(catId)!;
+                categoriaData.montoTotal += op.monto || 0;
+            }
+
+            // Calcular primera y última fecha
+            if (op.fecha) {
+                const fechaOp = new Date(op.fecha);
+                if (!primeraFecha || fechaOp < primeraFecha) {
+                    primeraFecha = fechaOp;
+                }
+                if (!ultimaFecha || fechaOp > ultimaFecha) {
+                    ultimaFecha = fechaOp;
+                }
+            }
+        });
+
+        // Convertir map a array
+        const categorias: CategoriaComparacionDto[] = Array.from(categoriasMap.entries()).map(([categoriaId, data]) => ({
+            categoriaId,
+            nombre: data.nombre,
+            montoTotal: data.montoTotal,
+        }));
+
+        const resultado: ComparacionUsuarioDto = {
+            sueldo: usuario.sueldo || null,
+            profesion: usuario.profesion || null,
+            estadoCivil: usuario.estadoCivil || null,
+            ubicacion: usuario.ubicacion || null,
+            categorias,
+            totalOperaciones: operaciones.length,
+            primeraFechaMes: primeraFecha || null,
+            ultimaFechaMes: ultimaFecha || null,
+        };
+
+        if (incluirNombre) {
+            resultado.name = usuario.name;
+        }
+
+        return resultado;
     }
 
     private toDTO(usuario: Usuario) {

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { UsuarioService } from "@services/usuario.service";
 import { asyncHandler, ValidationError } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
-// import { RequestWithAuth } from "@middlewares/sync-user.middleware";
+import { RequestWithAuth } from "@middlewares/sync-user.middleware";
 
 export class UsuarioController extends BaseController {
     constructor(private usuarioService: UsuarioService) {
@@ -88,5 +88,46 @@ export class UsuarioController extends BaseController {
         if (!id) throw new ValidationError("ID de usuario es requerido");
         const resultado = await this.usuarioService.delete(id);
         return this.sendSuccess(res, 200, resultado, "Usuario eliminado correctamente");
+    });
+
+    compararUsuarios = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const usuarioActualId = req.dbUser?.id || (req.dbUser as any)?._id?.toString();
+        if (!usuarioActualId) {
+            throw new ValidationError("No se pudo determinar el usuario actual desde el token de autenticación");
+        }
+
+        const { idUsuarioComparar } = req.params;
+        if (!idUsuarioComparar) {
+            throw new ValidationError("ID del usuario a comparar es requerido");
+        }
+
+        // Obtener mes y año de query params (opcional, por defecto mes actual)
+        // Soporta tanto "año" como "anio" para evitar problemas con caracteres especiales en URLs
+        const mesParam = req.query['mes'] || req.query['month'];
+        const añoParam = req.query['año'] || req.query['anio'] || req.query['year'];
+        
+        const mes = mesParam ? Number(mesParam) : undefined;
+        const año = añoParam ? Number(añoParam) : undefined;
+
+        // Validar que mes y año sean válidos si se proporcionan
+        if (mes !== undefined) {
+            if (isNaN(mes) || mes < 1 || mes > 12) {
+                throw new ValidationError("El mes debe ser un número entre 1 y 12");
+            }
+        }
+        if (año !== undefined) {
+            if (isNaN(año) || año < 2000 || año > 2100) {
+                throw new ValidationError("El año debe ser un número válido entre 2000 y 2100");
+            }
+        }
+
+        const comparacion = await this.usuarioService.compararUsuarios(
+            usuarioActualId.toString(),
+            idUsuarioComparar,
+            mes,
+            año
+        );
+
+        return this.sendSuccess(res, 200, comparacion, "Comparación de usuarios realizada exitosamente");
     });
 }
