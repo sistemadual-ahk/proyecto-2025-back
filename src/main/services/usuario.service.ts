@@ -95,7 +95,7 @@ export class UsuarioService {
         const usuarioExistente = await this.usuarioRepository.findById(id);
         if (!usuarioExistente) throw new NotFoundError(`Usuario con id ${id} no encontrado`);
 
-        const { name, mail, password, phoneNumber, sueldo, profesion, estadoCivil, ubicacion } = usuarioData;
+        const { name, mail, password, phoneNumber, sueldo, situacionLaboral, profesion, estadoCivil, ubicacion } = usuarioData;
 
         // console.log("ProvinciaService:", this.provinciaService);
 
@@ -140,6 +140,7 @@ export class UsuarioService {
             phoneNumber: phoneNumber || usuarioExistente.phoneNumber,
             password: password || usuarioExistente.password,
             sueldo: sueldo || usuarioExistente.sueldo,
+            situacionLaboral: situacionLaboral || usuarioExistente.situacionLaboral,
             estadoCivil: estadoCivil || usuarioExistente.estadoCivil,
             profesion: profesion || usuarioExistente.profesion,
             ubicacion: nuevaUbicacion,
