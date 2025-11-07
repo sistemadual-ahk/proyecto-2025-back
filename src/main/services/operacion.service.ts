@@ -114,13 +114,11 @@ export class OperacionService {
     let tipoFinal: string;
     if (tipo.toLowerCase() === "income" || tipo.toLowerCase() === "ingreso") {
       tipoFinal = "Ingreso";
-    } else if (
-      tipo.toLowerCase() === "expense" ||
-      tipo.toLowerCase() === "egreso"
-    ) {
+    } else if (tipo.toLowerCase() === "expense" ||tipo.toLowerCase() === "egreso") {
       tipoFinal = "Egreso";
     } else {
       throw new ValidationError(`El tipo de operacion '${tipo}' no es válido.`);
+
     } // 3. Verificación de existencia y recuperación de OBJETOS para Mongoose
 
     // 🚨 CORRECCIÓN: Usamos billeteraId y categoriaId para buscar
@@ -154,6 +152,17 @@ export class OperacionService {
     const operacionGuardada = await this.operacionRepository.save(
       nuevaOperacion
     );
+
+    const billeteraAActualizar = billeteraRecuperada;
+
+    if (tipoFinal === "Ingreso") {
+      billeteraAActualizar.ingresoHistorico += monto;
+    } else if (tipoFinal === "Egreso") {
+      billeteraAActualizar.gastoHistorico += monto;
+    }
+    billeteraAActualizar.balance = billeteraAActualizar.balance + (tipoFinal === 'Ingreso' ? monto : -monto);
+
+    await this.billeteraRepository.save(billeteraAActualizar);
     return this.toDTO(operacionGuardada);
   }
 
