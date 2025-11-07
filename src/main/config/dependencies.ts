@@ -40,7 +40,7 @@ export const openaiService = new OpenAIService(operacionRepo, categoriaService);
 export const provinciaService = new ProvinciaService(provinciaRepo);
 export const profesionService = new ProfesionService(profesionRepo);
 // movido abajo xq usuario utiliza ubicacion de provincia
-export const usuarioService = new UsuarioService(usuarioRepo, provinciaService);
+export const usuarioService = new UsuarioService(usuarioRepo, provinciaService, operacionService, categoriaService);
 
 // --- CONTROLADORES (Instanciación) ---
 export const categoriaController = new CategoriaController(categoriaService);
