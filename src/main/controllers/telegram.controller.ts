@@ -313,11 +313,21 @@ export class TelegramController extends BaseController {
             userSessions[chatId] = { modoEdicion: false };
           }
           const currentSession = userSessions[chatId];
+
+          if (!currentSession.billetera) {
+            const billeteraDefault = await this.billeteraService.findDefault(String(userIdTelegram));
+            if (billeteraDefault) {
+                currentSession.billetera = billeteraDefault.nombre; // o el campo que uses como identificador
+            }
+          }
+
+
           if (datosProcesados.monto) currentSession.monto = datosProcesados.monto;
           if (datosProcesados.fecha) currentSession.fecha = datosProcesados.fecha;
           if (datosProcesados.categoria) currentSession.categoria = datosProcesados.categoria;
           if (datosProcesados.descripcion) currentSession.descripcion = datosProcesados.descripcion;
         }
+
 
         const datos = userSessions[chatId];
         const mensajeInicial = this.getDatosMensaje(datos, '📋 Datos detectados:', true);
