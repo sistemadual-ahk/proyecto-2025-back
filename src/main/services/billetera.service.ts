@@ -80,7 +80,7 @@ export class BilleteraService {
   async updateDefault(id: string) {
     const billeteraDefaultNueva = await this.billeteraRepository.findById(id);
     if (!billeteraDefaultNueva)
-      throw new NotFoundError(`Billetera con id ${id} no encontrada`);
+      throw new NotFoundError(`Nueva billetera con id ${id} no encontrada`);
 
     const billeteraDefault = await this.billeteraRepository.findDefault();
     if (!billeteraDefault)

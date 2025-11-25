@@ -19,7 +19,7 @@ export class RepositorioDeOperaciones {
   }
 
   // ----------------------------------------------------------------------
-  // NUEVOS MÉTODOS DE BÚSQUEDA POR USUARIO
+  // MÉTODOS DE BÚSQUEDA POR USUARIO
   // ----------------------------------------------------------------------
 
   async findAllByUserId(userId: string): Promise<Operacion[]> {
@@ -31,7 +31,10 @@ export class RepositorioDeOperaciones {
     return operaciones as unknown as Operacion[];
   }
 
-  async findByTipoAndUserId(tipo: string, userId: string): Promise<Operacion[]> {
+  async findByTipoAndUserId(
+    tipo: string,
+    userId: string
+  ): Promise<Operacion[]> {
     const operaciones = await this.model
       .find({ tipo, user: userId })
       .populate("categoria")
@@ -132,5 +135,47 @@ export class RepositorioDeOperaciones {
   async deleteById(id: string): Promise<boolean> {
     const resultado = await this.model.findByIdAndDelete(id);
     return resultado !== null;
+  }
+
+  // ----------------------------------------------------------------------
+  // NUEVOS MÉTODOS PARA OBJETIVOS
+  // ----------------------------------------------------------------------
+
+  async findByObjetivoId(
+    objetivoId: string,
+    userId?: string
+  ): Promise<Operacion[]> {
+    const query: any = { objetivo: objetivoId };
+    if (userId) {
+      query.user = userId;
+    }
+
+    const operaciones = await this.model
+      .find(query)
+      .populate("categoria")
+      .populate("billetera")
+      .populate("user");
+
+    return operaciones as unknown as Operacion[];
+  }
+
+  async calcularMontoTotalPorObjetivo(
+    objetivoId: string,
+    userId?: string
+  ): Promise<number> {
+    const match: any = {
+      objetivo: new mongoose.Types.ObjectId(objetivoId),
+    };
+
+    if (userId) {
+      match.user = new mongoose.Types.ObjectId(userId);
+    }
+
+    const resultado = await this.model.aggregate([
+      { $match: match },
+      { $group: { _id: null, total: { $sum: "$monto" } } },
+    ]);
+
+    return resultado[0]?.total ?? 0;
   }
 }
