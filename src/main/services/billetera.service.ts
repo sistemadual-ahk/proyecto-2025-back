@@ -22,6 +22,24 @@ export class BilleteraService {
     return billeteras.map((c) => this.toDTO(c));
   }
 
+  async findDefaultForUser(userId?: string) {
+  if (!userId) {
+    throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
+  }
+  const billeteras = await this.billeteraRepository.findAllForUser(userId);
+
+  if (!billeteras || billeteras.length === 0) {
+    throw new NotFoundError(`El usuario ${userId} no tiene billeteras`);
+  }
+  const billeteraDefault = billeteras.find((b) => b.isDefault === true);
+
+  if (!billeteraDefault) {
+    throw new NotFoundError(`El usuario ${userId} no tiene una billetera default`);
+  }
+
+  return this.toDTO(billeteraDefault);
+}
+
   async findById(id: string) {
     const billetera = await this.billeteraRepository.findById(id);
     if (!billetera)
