@@ -33,9 +33,9 @@ export const profesionRepo = new RepositorioDeProfesiones();
 
 // --- SERVICIOS (Instanciación) ---
 export const categoriaService = new CategoriaService(categoriaRepo, usuarioRepo);
-export const operacionService = new OperacionService(operacionRepo, categoriaRepo, billeteraRepo, usuarioRepo);
+export const operacionService = new OperacionService(operacionRepo, categoriaRepo, billeteraRepo, usuarioRepo, objetivoRepo);
 export const billeteraService = new BilleteraService(billeteraRepo, usuarioRepo);
-export const objetivoService = new ObjetivoService(objetivoRepo, usuarioRepo, billeteraRepo, categoriaRepo);
+export const objetivoService = new ObjetivoService(objetivoRepo, usuarioRepo, billeteraRepo, categoriaRepo, operacionRepo);
 export const openaiService = new OpenAIService(operacionRepo, categoriaService);
 export const provinciaService = new ProvinciaService(provinciaRepo);
 export const profesionService = new ProfesionService(profesionRepo);
