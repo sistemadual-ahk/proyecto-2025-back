@@ -1,46 +1,59 @@
 import mongoose from 'mongoose';
 import { Categoria } from '../entities/categoria';
 
-const categoriaSchema = new mongoose.Schema({
-  nombre: {
-    type: String,
-    required: true,
-    trim: true,
-    validate: {
-      validator: function (v: string) {
-        return v.length >= 2;
+const categoriaSchema = new mongoose.Schema(
+  {
+    nombre: {
+      type: String,
+      required: true,
+      trim: true,
+      validate: {
+        validator: function (v: string) {
+          return v.length >= 2;
+        },
+        message: 'El nombre debe tener al menos 2 caracteres',
       },
-      message: 'El nombre debe tener al menos 2 caracteres'
-    }
+    },
+    descripcion: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    icono: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    color: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    iconColor: {
+      type: String,
+      trim: true,
+      default: '#111827', // mismo default que usás en el front
+    },
+    type: {
+      type: String,
+      enum: ['income', 'expense'],
+      default: 'expense',
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Usuario',
+      default: null,
+    },
+    isDefault: {
+      type: Boolean,
+      default: true,
+    },
   },
-  descripcion: {
-    type: String,
-    trim: true,
-    default: ''
-  },
-  icono: {
-    type: String,
-    trim: true,
-    default: ''
-  },
-  color: {
-    type: String,
-    trim: true,
-    default: ''
-  },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Usuario',
-    default: null
-  },
-  isDefault: {
-    type: Boolean,
-    default: true
+  {
+    timestamps: true,
+    collection: 'categorias',
   }
-}, {
-  timestamps: true,
-  collection: 'categorias'
-});
+);
 
 categoriaSchema.loadClass(Categoria);
 

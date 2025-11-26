@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { ProvinciaService } from "@services/ubicacion/provincia.service";
 import { asyncHandler, ValidationError } from "../../middlewares/error.middleware";
 import { BaseController } from "../base.controller";
+import { ubicacionToDebugString } from "main/utils/debugUtils";
 
 export class ProvinciaController extends BaseController {
     constructor(private provinciaService: ProvinciaService) {
@@ -25,7 +26,7 @@ export class ProvinciaController extends BaseController {
         const solicitudValida = await this.provinciaService.verificarUbicacionCompleta(String(provincia), String(municipio), String(localidad));
 
         // debug para mostrar
-        const debugMsgUbicacion = `${provincia} > ${municipio} > ${localidad}`;
+        const debugMsgUbicacion = ubicacionToDebugString({ provincia: String(provincia), municipio: String(municipio), localidad: String(localidad) });
 
         return this.sendSuccess(res, 200, { solicitudValida }, solicitudValida ? `Ubicacion verificada y existente: ${debugMsgUbicacion}` : `Ubicación no encontrada: ${debugMsgUbicacion}`);
     });
