@@ -282,18 +282,44 @@ export class TelegramController extends BaseController {
             const session = userSessions[chatId];
             
             let user = session.user;
-            if (!user && usuarioIdTelegram) {
-                const userResult = await this.usuarioService.findByTelegramId(String(usuarioIdTelegram));
-                
-                if (userResult && userResult.authId) {
-                    user = userResult as UsuarioSessionDTO;
-                    session.user = user;
-                } else {
-                    await bot.sendMessage(chatId, "⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.");
-                    return;
-                }
-            }
-            if (!session.user) return; 
+
+if (usuarioIdTelegram) {
+    try {
+        const userResult = await this.usuarioService.findByTelegramId(String(usuarioIdTelegram));
+
+        if (userResult && userResult.authId) {
+            user = userResult as UsuarioSessionDTO;
+            session.user = user;
+        } else {
+            await bot.sendMessage(
+                chatId,
+                "⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.\n\n" +
+                "👉 Inicia sesión en la app web y vinculá tu cuenta con Telegram."
+            );
+            return;
+        }
+
+    } catch (e) {
+        // El servicio tiró error → capturarlo acá
+        await bot.sendMessage(
+            chatId,
+            "⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.\n\n" +
+            "👉 Inicia sesión en la app web y vinculá tu cuenta con Telegram."
+        );
+        return;
+    }
+}
+
+
+// Seguridad adicional: no continuar sin usuario
+if (!session.user) {
+    await bot.sendMessage(
+        chatId,
+        "⚠️ Aún no estás registrado/vinculado. No puedo procesar gastos."
+    );
+    return;
+}
+
 
             if (session.estado === 'esperando_monto') {
                 await manejarValidacionMonto(chatId, nuevoValor, session);
@@ -405,18 +431,29 @@ export class TelegramController extends BaseController {
             }
 
             let user = sessionData.user;
-            if (!user && userIdTelegram) {
-                const userResult = await this.usuarioService.findByTelegramId(String(userIdTelegram));
-                
-                if (userResult && userResult.authId) {
-                    user = userResult as UsuarioSessionDTO;
-                    sessionData.user = user;
-                }
-            }
-            if (!user) {
-                bot.sendMessage(chatId, '❌ Tu usuario no está vinculado o no se encontró en la base de datos.');
-                return;
-            }
+           if (!user && userIdTelegram) {
+    try {
+        const userResult = await this.usuarioService.findByTelegramId(String(userIdTelegram));
+
+        if (userResult && userResult.authId) {
+            user = userResult as UsuarioSessionDTO;
+            sessionData.user = user;
+        }
+    } catch (e) {
+        // silenciar error
+    }
+}
+
+if (!user) {
+    await bot.sendMessage(
+        chatId,
+        `⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.\n\n` +
+        `👉 Debes iniciar sesión en la app de Gastify y poner tu ID de Telegram en la configuración.\n\n` +
+        `Tu ID de Telegram es: ${userIdTelegram}`
+    );
+    return;
+}
+
 
             const originalMessageId = sessionData.originalMessageId;
 
