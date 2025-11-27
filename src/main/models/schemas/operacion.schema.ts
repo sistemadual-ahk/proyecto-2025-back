@@ -42,7 +42,13 @@ const operacionSchema = new mongoose.Schema({
       type: String,
       enum: Object.values(TipoOperacion),
       required: true
-    }
+    },
+  objetivo:{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Objetivo',
+    required: false,
+    default: null
+  }
 }, {
   timestamps: true,
   collection: 'operaciones'

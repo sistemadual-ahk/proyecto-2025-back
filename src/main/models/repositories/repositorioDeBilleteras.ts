@@ -1,7 +1,6 @@
 import { BilleteraModel } from '../schemas/billetera.schema';
 import { Billetera } from '../entities/billetera';
 import { Types } from 'mongoose';
-import { equal } from 'assert';
 
 export class RepositorioDeBilleteras {
     private model: typeof BilleteraModel;
@@ -22,10 +21,10 @@ export class RepositorioDeBilleteras {
     }
 
     async findAllForUser(userId: string): Promise<Billetera[]> {
-            const uid = new Types.ObjectId(userId);
-            const billetera = await this.model.find({user: uid}).populate('user', 'name _id');
-            return billetera as unknown as Billetera[];
-        }
+        const uid = new Types.ObjectId(userId);
+        const billetera = await this.model.find({ user: uid }).populate('user', 'name _id');
+        return billetera as unknown as Billetera[];
+    }
 
     async findByNameAndUser(nombre: string, userId: string): Promise<Billetera | null> {
         const uid = new Types.ObjectId(userId);
@@ -33,10 +32,24 @@ export class RepositorioDeBilleteras {
         return billetera as unknown as Billetera | null;
     }
 
-    async findDefault(): Promise<Billetera | null> {
-        const billetera = await this.model.findOne({ isDefault : true });
+
+    async findDefault(userId?: string): Promise<Billetera | null> {
+        if (!userId) {
+            throw new Error('findDefault requiere userId');
+        }
+
+        if (!Types.ObjectId.isValid(userId)) {
+            throw new Error('userId inválido');
+        }
+
+        const uid = new Types.ObjectId(userId);
+        const billetera = await this.model
+            .findOne({ user: uid, isDefault: true })
+            .populate('user', 'name _id');
+
         return billetera as unknown as Billetera | null;
     }
+
 
     async save(billetera: Partial<Billetera>): Promise<Billetera> {
         if (billetera.id) {
