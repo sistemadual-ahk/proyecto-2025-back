@@ -350,12 +350,16 @@ export class TelegramController extends BaseController {
                 if (datosProcesados) {
                     const currentSession = userSessions[chatId];
                     
-                   /* if (!currentSession.billetera && currentSession.user) {
-                        const billeteraDefaultDto = await this.billeteraService.findDefault(currentSession.user.authId);
+                    if (!currentSession.billetera && currentSession.user) {
+                        let billeteraDefaultDto = null;
+                        if(await this.billeteraService.findDefaultForUser(user?.id) != null){
+                            billeteraDefaultDto = await this.billeteraService.findDefaultForUser(user?.id);
+                        }
+
                         if (billeteraDefaultDto) {
                             currentSession.billetera = billeteraDefaultDto.nombre;
                         }
-                    }*/
+                    }
 
                     if (datosProcesados.monto) currentSession.monto = datosProcesados.monto;
                     if (datosProcesados.fecha) currentSession.fecha = datosProcesados.fecha;
@@ -482,7 +486,7 @@ export class TelegramController extends BaseController {
                     mostrarMenuCategorias(bot, chatId);
                 } else if (campo === 'billetera') {
                     // Usamos el authId del user de la sesión, que ahora es el DTO
-                    mostrarMenuBilleteras(bot, chatId, user.authId); 
+                    mostrarMenuBilleteras(bot, chatId, user.id); 
                 } else {
                     sessionData.estado = `esperando_${campo}` as UserSession['estado'];
                     sessionData.campo = campo;
