@@ -48,7 +48,6 @@ export class TelegramController extends BaseController {
         private categoriaService: CategoriaService,
         private billeteraService: BilleteraService,
         private usuarioService: UsuarioService,
-        // ⭐ INYECTADO: Repositorio para buscar Billetera, ya que el Service no tiene findByName
         private billeteraRepository: RepositorioDeBilleteras 
     ) {
         super();
@@ -121,8 +120,7 @@ export class TelegramController extends BaseController {
 
         const categoria = await this.categoriaService.findByName(session.categoria);
         
-        // ⭐ USANDO REPOSITORIO DIRECTO
-        const billetera = await this.billeteraRepository.findByNameAndUser(session.billetera, session.user.authId);
+        const billetera = await this.billeteraRepository.findByNameAndUser(session.billetera, session.user.id);
         
         if (!categoria || !billetera) return null;
 
@@ -134,7 +132,6 @@ export class TelegramController extends BaseController {
         if (isNaN(dia) || isNaN(mes) || isNaN(anio)) return null;
         const fecha = new Date(anio, mes - 1, dia);
 
-        // ⭐ SOLUCIÓN AL ERROR DE TIPADO DE 'user'. Creamos un objeto con solo el ID.
         const userReference = { id: session.user.id }; 
         
         return {
@@ -144,7 +141,7 @@ export class TelegramController extends BaseController {
             descripcion: session.descripcion,
             tipo: TipoOperacion.EGRESO,
             billetera: billetera, 
-            user: userReference as any, // ⚠️ Forzamos a 'any' para evitar que TypeScript exija la entidad completa (con auth0Id, password)
+            user: userReference as any, 
         };
     }
 
@@ -289,7 +286,6 @@ export class TelegramController extends BaseController {
                 const userResult = await this.usuarioService.findByTelegramId(String(usuarioIdTelegram));
                 
                 if (userResult && userResult.authId) {
-                    // ⭐ CORREGIDO: Se usa el DTO ajustado, el casteo es válido.
                     user = userResult as UsuarioSessionDTO;
                     session.user = user;
                 } else {
@@ -352,13 +348,23 @@ export class TelegramController extends BaseController {
                     
                     if (!currentSession.billetera && currentSession.user) {
                         let billeteraDefaultDto = null;
-                        if(await this.billeteraService.findDefaultForUser(user?.id) != null){
-                            billeteraDefaultDto = await this.billeteraService.findDefaultForUser(user?.id);
-                        }
+                        
+                      try {
+    billeteraDefaultDto = await this.billeteraService.findDefaultForUser(user?.id);
+} catch (e: any) {
+    if (e.statusCode === 404 || e.message?.includes('no tiene una billetera default')) {
+        // No tiene billetera default → continuar
+        billeteraDefaultDto = null;
+    } else {
+        throw e;
+    }
+}
 
+                        
                         if (billeteraDefaultDto) {
                             currentSession.billetera = billeteraDefaultDto.nombre;
-                        }
+                        } 
+                        // Si no se encuentra (o se captura el NotFoundError), currentSession.billetera queda undefined.
                     }
 
                     if (datosProcesados.monto) currentSession.monto = datosProcesados.monto;
@@ -485,7 +491,6 @@ export class TelegramController extends BaseController {
                 if (campo === 'categoria') {
                     mostrarMenuCategorias(bot, chatId);
                 } else if (campo === 'billetera') {
-                    // Usamos el authId del user de la sesión, que ahora es el DTO
                     mostrarMenuBilleteras(bot, chatId, user.id); 
                 } else {
                     sessionData.estado = `esperando_${campo}` as UserSession['estado'];
