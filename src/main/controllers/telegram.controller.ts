@@ -293,8 +293,10 @@ if (usuarioIdTelegram) {
         } else {
             await bot.sendMessage(
                 chatId,
-                "⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.\n\n" +
-                "👉 Inicia sesión en la app web y vinculá tu cuenta con Telegram."
+                `⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.\n\n` +
+                `👉 Inicia sesión en la app web y vinculá tu cuenta con Telegram.\n` +
+                `Copia y pega tu id de Telegram en tu configuración de Gastify: **${usuarioIdTelegram}**`, // <-- Usar **DOBLE ASTERISCO**
+                { parse_mode: 'Markdown' }
             );
             return;
         }
@@ -303,8 +305,10 @@ if (usuarioIdTelegram) {
         // El servicio tiró error → capturarlo acá
         await bot.sendMessage(
             chatId,
-            "⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.\n\n" +
-            "👉 Inicia sesión en la app web y vinculá tu cuenta con Telegram."
+            `⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.\n\n` +
+            `👉 Inicia sesión en la app web y vinculá tu cuenta con Telegram.\n\n` +
+            `Copia y pega tu id de Telegram en tu configuración de Gastify: **${usuarioIdTelegram}**`, // <-- Usar **DOBLE ASTERISCO**
+            { parse_mode: 'Markdown' }
         );
         return;
     }
@@ -444,20 +448,7 @@ if (!session.user) {
     }
 }
 
-if (!user) {
-    const message =
-        `⚠️ No estás registrado/vinculado\. No puedo guardar tus operaciones\.\n\n` +
-        `👉 Debes iniciar sesión en la app de Gastify y poner tu ID de Telegram en la **configuración**\.\n\n` +
-        `Tu ID de Telegram es: \`${userIdTelegram}\``;
 
-    await bot.sendMessage(
-        chatId,
-        message,
-        { parse_mode: 'MarkdownV2' }
-    );
-    return;
-}
-console.log(">>> CARGANDO TELEGRAM CONTROLLER (ACTUALIZADO)");
 
 
             const originalMessageId = sessionData.originalMessageId;
@@ -533,7 +524,7 @@ console.log(">>> CARGANDO TELEGRAM CONTROLLER (ACTUALIZADO)");
                 if (campo === 'categoria') {
                     mostrarMenuCategorias(bot, chatId);
                 } else if (campo === 'billetera') {
-                    mostrarMenuBilleteras(bot, chatId, user.id); 
+                    mostrarMenuBilleteras(bot, chatId, user!.id); 
                 } else {
                     sessionData.estado = `esperando_${campo}` as UserSession['estado'];
                     sessionData.campo = campo;
