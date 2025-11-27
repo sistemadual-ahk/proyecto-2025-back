@@ -1,7 +1,6 @@
 import { BilleteraModel } from '../schemas/billetera.schema';
 import { Billetera } from '../entities/billetera';
 import { Types } from 'mongoose';
-import { equal } from 'assert';
 
 export class RepositorioDeBilleteras {
     private model: typeof BilleteraModel;

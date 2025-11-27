@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { Moneda } from '../entities/moneda';
-import { TipoBilletera } from '../entities/tipoBilletera';
 import { Billetera } from '../entities/billetera';
 
 const billeteraSchema = new mongoose.Schema({
@@ -18,16 +17,6 @@ const billeteraSchema = new mongoose.Schema({
     required: true,
     default: 0
   },
-  balanceHistorico: {
-    type: Number,
-    required: true,
-    default: 0
-  },
-  /*tipo: {
-    type: String,
-    enum: Object.values(TipoBilletera),
-    required: true
-  },*/
   color: {
     type: String,
     default: ''
@@ -35,6 +24,16 @@ const billeteraSchema = new mongoose.Schema({
   isDefault: {
     type: Boolean,
     default: false
+  },
+  gastoHistorico: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  ingresoHistorico: {
+    type: Number,
+    required: true,
+    default: 0
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,

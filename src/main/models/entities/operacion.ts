@@ -12,5 +12,6 @@ export class Operacion {
    fecha?: Date;
    tipo?: TipoOperacion;
    user?: Usuario
-    nuevaOperacion: Billetera;
+   nuevaOperacion: Billetera;
+   objetivo?: string; // ID del objetivo (opcional)
 }

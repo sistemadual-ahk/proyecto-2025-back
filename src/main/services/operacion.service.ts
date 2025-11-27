@@ -1,210 +1,343 @@
 import { Operacion } from "@models/entities/operacion";
 import { RepositorioDeOperaciones } from "@models/repositories/repositorioDeOperaciones";
-import { ValidationError, ConflictError, NotFoundError } from "../middlewares/error.middleware";
-import { RepositorioDeBilleteras, RepositorioDeCategorias, RepositorioDeUsuarios } from "@models/repositories";
+import {
+  ValidationError,
+  NotFoundError,
+} from "../middlewares/error.middleware";
+import {
+  RepositorioDeBilleteras,
+  RepositorioDeCategorias,
+  RepositorioDeUsuarios,
+} from "@models/repositories";
+import { RepositorioDeObjetivos } from "@models/repositories/repositorioDeObjetivos";
+import { EstadoObjetivo } from "@models/entities/objetivo";
 
-// Tipo para los filtros, que ahora también recibe el userId
-type OperacionFilters = {
+type OperacionInputData = {
+  monto: number;
+  tipo: string;
+  billeteraId: string;
+  categoriaId: string;
+  user?: string;
+  descripcion?: string;
+  fecha?: Date;
+  objetivo?: string; // id de objetivo
+};
+
+export class OperacionService {
+  constructor(
+    private operacionRepository: RepositorioDeOperaciones,
+    private categoriaRepository: RepositorioDeCategorias,
+    private billeteraRepository: RepositorioDeBilleteras,
+    private userRepository: RepositorioDeUsuarios,
+    private objetivoRepository: RepositorioDeObjetivos
+  ) {}
+
+  // ----------------------------------------------------------------------
+  // MÉTODOS FILTRADOS POR USUARIO
+  // ----------------------------------------------------------------------
+
+  async findAllForUser(userId: string) {
+    const operaciones = await this.operacionRepository.findAllByUserId(userId);
+    return operaciones.map((o) => this.toDTO(o));
+  }
+
+  async findAllEgresosForUser(userId: string) {
+    const operaciones = await this.operacionRepository.findByTipoAndUserId(
+      "Egreso",
+      userId
+    );
+    return operaciones.map((o) => this.toDTO(o));
+  }
+
+  async findAllIngresosForUser(userId: string) {
+    const operaciones = await this.operacionRepository.findByTipoAndUserId(
+      "Ingreso",
+      userId
+    );
+    return operaciones.map((o) => this.toDTO(o));
+  }
+
+  // ----------------------------------------------------------------------
+  // FILTROS
+  // ----------------------------------------------------------------------
+
+  async findByFilters(filters: {
+    userId?: string;
     tipo?: string;
     categoriaId?: string;
     billeteraId?: string;
-    desde?: Date; // Ya convertidos a Date por el Controller o Service
-    hasta?: Date;
-};
+    desde?: string;
+    hasta?: string;
+  }) {
+    const { userId, tipo, categoriaId, billeteraId, desde, hasta } = filters;
 
-// Tipo de datos que el método create espera (incluyendo user ID)
-type OperacionInputData = {
-    monto: number;
-    tipo: string; // 'income' o 'expense'
-    billetera: string; // ID
-    categoria: string; // ID
-    user: string; // ID del usuario autenticado
-    descripcion?: string;
-    fecha?: Date;
-};
+    const parsedDesde = desde ? new Date(desde) : undefined;
+    const parsedHasta = hasta ? new Date(hasta) : undefined;
 
+    const operaciones = await this.operacionRepository.findByFilters({
+      userId,
+      tipo,
+      categoriaId,
+      billeteraId,
+      desde: parsedDesde,
+      hasta: parsedHasta,
+    });
+    return operaciones.map((o) => this.toDTO(o));
+  }
 
-export class OperacionService {
-    constructor(
-        private operacionRepository: RepositorioDeOperaciones,
-        private categoriaRepository: RepositorioDeCategorias,
-        private billeteraRepository: RepositorioDeBilleteras,
-        private userRepository: RepositorioDeUsuarios
-    ) { }
+  async findById(id: string, userId: string) {
+    const operacion = await this.operacionRepository.findById(id);
+    if (
+      !operacion ||
+      !(operacion.user as any)?._id ||
+      (operacion.user as any)._id.toString() !== userId
+    ) {
+      throw new NotFoundError(`Operacion con id ${id} no encontrada`);
+    }
+    return this.toDTO(operacion);
+  }
 
-    // ----------------------------------------------------------------------
-    // MÉTODOS FILTRADOS POR USUARIO
-    // ----------------------------------------------------------------------
+  // ----------------------------------------------------------------------
+  // CREATE
+  // ----------------------------------------------------------------------
 
-    async findAllForUser(userId: string) {
-        const operaciones = await this.operacionRepository.findAllByUserId(userId);
-        return operaciones.map(o => this.toDTO(o));
+  async create(operacionData: OperacionInputData) {
+    const {
+      descripcion,
+      monto,
+      tipo,
+      fecha,
+      billeteraId,
+      categoriaId,
+      user,
+      objetivo,
+    } = operacionData;
+
+    if (!monto || !tipo || !user || !billeteraId || !categoriaId) {
+      throw new ValidationError(
+        "Monto, tipo, usuario, billeteraId y categoriaId son requeridos"
+      );
+    }
+    if (monto === 0) {
+      throw new ValidationError("El monto de la operacion no debe ser 0");
     }
 
-    async findAllEgresosForUser(userId: string) {
-        const operaciones = await this.operacionRepository.findByTipoAndUserId('Egreso', userId);
-        return operaciones.map(o => this.toDTO(o));
+    let tipoFinal: string;
+    if (tipo.toLowerCase() === "income" || tipo.toLowerCase() === "ingreso") {
+      tipoFinal = "Ingreso";
+    } else if (
+      tipo.toLowerCase() === "expense" ||
+      tipo.toLowerCase() === "egreso"
+    ) {
+      tipoFinal = "Egreso";
+    } else {
+      throw new ValidationError(`El tipo de operacion '${tipo}' no es válido.`);
     }
 
-    async findAllIngresosForUser(userId: string) {
-        const operaciones = await this.operacionRepository.findByTipoAndUserId('Ingreso', userId);
-        return operaciones.map(o => this.toDTO(o));
+    const billeteraRecuperada = await this.billeteraRepository.findById(
+      billeteraId as string
+    );
+    if (!billeteraRecuperada)
+      throw new NotFoundError(
+        `Billetera con ID ${billeteraId} no encontrada`
+      );
+
+    const categoriaRecuperada = await this.categoriaRepository.findById(
+      categoriaId as string
+    );
+    if (!categoriaRecuperada)
+      throw new NotFoundError(
+        `Categoria con ID ${categoriaId} no encontrada`
+      );
+
+    const usuarioRecuperado = await this.userRepository.findById(user);
+    if (!usuarioRecuperado)
+      throw new NotFoundError(`Usuario con ID ${user} no encontrado`);
+
+    // Validar objetivo (si viene) y que sea del usuario
+    if (objetivo) {
+      const objetivoRecuperado = await this.objetivoRepository.findByIdAndUser(
+        objetivo,
+        user
+      );
+      if (!objetivoRecuperado) {
+        throw new ValidationError(
+          "El objetivo no existe o no pertenece al usuario"
+        );
+      }
     }
 
-    // ----------------------------------------------------------------------
-    // MÉTODOS EXISTENTES
-    // ----------------------------------------------------------------------
+    const nuevaOperacion = new Operacion();
+    nuevaOperacion.monto = monto;
+    nuevaOperacion.descripcion = descripcion;
+    nuevaOperacion.fecha = fecha || new Date();
+    nuevaOperacion.tipo = tipoFinal as any;
 
-    async findByFilters(filters: {
-        userID?: string;
-        tipo?: string;
-        categoriaId?: string;
-        billeteraId?: string;
-        desde?: string; // Recibe string
-        hasta?: string;
-    }) {
-        const { userID, tipo, categoriaId, billeteraId, desde, hasta } = filters;
+    nuevaOperacion.billetera = billeteraRecuperada;
+    nuevaOperacion.categoria = categoriaRecuperada;
+    nuevaOperacion.user = usuarioRecuperado;
+    nuevaOperacion.objetivo = objetivo || undefined;
 
-        // Conversión de fechas dentro del servicio
-        const parsedDesde = desde ? new Date(desde) : undefined;
-        const parsedHasta = hasta ? new Date(hasta) : undefined;
+    const operacionGuardada = await this.operacionRepository.save(
+      nuevaOperacion
+    );
 
-        const operaciones = await this.operacionRepository.findByFilters({
-            userID,
-            tipo,
-            categoriaId,
-            billeteraId,
-            desde: parsedDesde,
-            hasta: parsedHasta
-        });
-        return operaciones.map(o => this.toDTO(o));
+    const billeteraAActualizar = billeteraRecuperada;
+
+    if (tipoFinal === "Ingreso") {
+      billeteraAActualizar.ingresoHistorico += monto;
+    } else if (tipoFinal === "Egreso") {
+      billeteraAActualizar.gastoHistorico += monto;
+    }
+    billeteraAActualizar.balance =
+      billeteraAActualizar.balance +
+      (tipoFinal === "Ingreso" ? monto : -monto);
+
+    await this.billeteraRepository.save(billeteraAActualizar);
+
+    // Recalcular objetivo si corresponde
+    if (objetivo) {
+      await this.recalcularObjetivo(objetivo, user);
     }
 
-    async findById(id: string) {
-        const operacion = await this.operacionRepository.findById(id);
-        if (!operacion) {
-            throw new NotFoundError(`Operacion con id ${id} no encontrada`);
-        }
-        // Idealmente, añadir: if (operacion.user.id !== userId) throw NotAuthorizedError...
-        return this.toDTO(operacion);
+    return this.toDTO(operacionGuardada);
+  }
+
+  // ----------------------------------------------------------------------
+  // UPDATE y DELETE
+  // ----------------------------------------------------------------------
+
+  async update(
+    id: string,
+    operacionData: Partial<Operacion>,
+    userId: string
+  ) {
+    const operacionExistente = await this.operacionRepository.findById(id);
+    if (
+      !operacionExistente ||
+      !(operacionExistente.user as any)?._id ||
+      (operacionExistente.user as any)._id.toString() !== userId
+    ) {
+      throw new NotFoundError(`Operacion con id ${id} no encontrada`);
     }
 
-    // ----------------------------------------------------------------------
-    // CREATE (CORREGIDO)
-    // ----------------------------------------------------------------------
-    async create(operacionData: OperacionInputData) {
-        const { descripcion, monto, tipo, fecha, billetera, categoria, user } = operacionData;
+    const objetivoAnteriorId = operacionExistente.objetivo
+      ? (operacionExistente.objetivo as any).toString()
+      : null;
 
-        // 1. Validación de campos requeridos (incluye 'user', inyectado por el Controller)
-        if (!monto || !tipo || !user || !billetera || !categoria) {
-            throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
-        }
+    const { descripcion, monto, fecha, tipo, objetivo } = operacionData as any;
 
-        // Validación básica
-        if (!monto || !tipo || !user || !billetera || !categoria) {
-            throw new ValidationError('Monto, tipo, usuario, billetera y categoría son requeridos');
-        }
-        if (monto === 0) {
-            throw new ValidationError('El monto de la operacion no debe ser 0');
-        }
-
-        // 2. Traducción y validación del tipo de operación (CRÍTICO)
-        let tipoFinal: string;
-        if (tipo === 'income') {
-            tipoFinal = 'Ingreso';
-        } else if (tipo === 'expense') {
-            tipoFinal = 'Egreso';
-        } else {
-            throw new ValidationError('El tipo de operacion debe ser Ingreso o Egreso');
-        }
-
-        // 3. Verificación de existencia y recuperación de OBJETOS para Mongoose
-        const billeteraRecuperada = await this.billeteraRepository.findById(billetera as string);
-        if (!billeteraRecuperada) throw new NotFoundError(`Billetera con ID ${billetera} no encontrada`);
-
-        const categoriaRecuperada = await this.categoriaRepository.findById(categoria as string);
-        if (!categoriaRecuperada) throw new NotFoundError(`Categoria con ID ${categoria} no encontrada`);
-
-        // Recuperamos el objeto Usuario completo para Mongoose
-        const usuarioRecuperado = await this.userRepository.findById(user);
-        if (!usuarioRecuperado) throw new NotFoundError(`Usuario con ID ${user} no encontrado`);
-
-        // 4. Creación y asignación de la entidad
-        const nuevaOperacion = new Operacion();
-        nuevaOperacion.monto = monto;
-        nuevaOperacion.descripcion = descripcion;
-        nuevaOperacion.fecha = fecha;
-        nuevaOperacion.tipo = tipoFinal as any; // Usamos el valor traducido
-
-        // Asignamos las entidades/objetos recuperados
-        nuevaOperacion.billetera = billeteraRecuperada;
-        nuevaOperacion.categoria = categoriaRecuperada;
-        nuevaOperacion.user = usuarioRecuperado;
-
-        const operacionGuardada = await this.operacionRepository.save(nuevaOperacion);
-        return this.toDTO(operacionGuardada);
+    if (monto !== undefined && monto === 0) {
+      throw new ValidationError("El monto de la operacion no debe ser 0");
     }
 
-    // ----------------------------------------------------------------------
-    // UPDATE y DELETE 
-    // ----------------------------------------------------------------------
-    async update(id: string, operacionData: Partial<Operacion>) {
-        // ... (Validaciones y lógica existente, idealmente verificar userId) ...
-        const operacionExistente = await this.operacionRepository.findById(id);
-        if (!operacionExistente) throw new NotFoundError(`Operacion con id ${id} no encontrada`);
-        // Añadir: if (operacionExistente.user.id !== userId) throw NotAuthorized...
+    const operacionActualizada: Partial<Operacion> = {
+      id: id,
+      monto: monto !== undefined ? monto : operacionExistente.monto,
+      descripcion: descripcion || operacionExistente.descripcion,
+      fecha: fecha || operacionExistente.fecha,
+      tipo: tipo || operacionExistente.tipo,
+      objetivo: objetivo !== undefined ? objetivo : operacionExistente.objetivo,
+    };
 
-        const { descripcion, monto, fecha, tipo } = operacionData;
+    const resultado = await this.operacionRepository.save(operacionActualizada);
 
-        if (monto !== undefined && monto === 0) {
-            throw new ValidationError('El monto de la operacion no debe ser 0');
-        }
+    const objetivoNuevoId = operacionActualizada.objetivo
+      ? (operacionActualizada.objetivo as any).toString()
+      : null;
 
-        const operacionActualizada = {
-            id: id,
-            monto: monto !== undefined ? monto : operacionExistente.monto,
-            descripcion: descripcion || operacionExistente.descripcion,
-            fecha: fecha || operacionExistente.fecha,
-            tipo: tipo || operacionExistente.tipo,
-        };
-
-        const resultado = await this.operacionRepository.save(operacionActualizada);
-        return this.toDTO(resultado);
+    // Recalcular objetivos afectados
+    if (objetivoAnteriorId && objetivoAnteriorId !== objetivoNuevoId) {
+      await this.recalcularObjetivo(objetivoAnteriorId, userId);
+    }
+    if (objetivoNuevoId) {
+      await this.recalcularObjetivo(objetivoNuevoId, userId);
     }
 
-    async delete(id: string) {
-        // ... (Lógica existente, idealmente verificar userId antes de borrar) ...
-        const operacion = await this.operacionRepository.findById(id);
-        if (!operacion) throw new NotFoundError(`Operacion con id ${id} no encontrada`);
-        // Añadir: if (operacion.user.id !== userId) throw NotAuthorized...
+    return this.toDTO(resultado);
+  }
 
-        const deleted = await this.operacionRepository.deleteById(id);
-        if (!deleted) {
-            throw new NotFoundError(`Operacion con id ${id} no se pudo eliminar`);
-        }
-        return { success: true, message: 'Operacion eliminada correctamente' };
+  async delete(id: string, userId: string) {
+    const operacion = await this.operacionRepository.findById(id);
+
+    if (
+      !operacion ||
+      !(operacion.user as any)?._id ||
+      (operacion.user as any)._id.toString() !== userId
+    ) {
+      throw new NotFoundError(`Operacion con id ${id} no encontrada`);
     }
 
-    // ----------------------------------------------------------------------
-    // DTO MAPPING
-    // ----------------------------------------------------------------------
-    private toDTO(operacion: Operacion) {
-        // ... (Tu función toDTO existente) ...
-        return {
-            id: operacion.id || (operacion as any)._id,
-            descripcion: operacion.descripcion,
-            monto: operacion.monto,
-            categoria: operacion.categoria, // Puede necesitar poblarse o mapear a DTO
-            billetera: operacion.billetera, // Puede necesitar poblarse o mapear a DTO
-            fecha: operacion.fecha,
-            tipo: operacion.tipo,
-            user: operacion.user
-                ? {
-                    id: (operacion.user as any)._id,
-                    nombre: (operacion.user as any).nombre,
-                    email: (operacion.user as any).email
-                }
-                : null
-        };
+    const objetivoId = operacion.objetivo
+      ? (operacion.objetivo as any).toString()
+      : null;
+
+    const deleted = await this.operacionRepository.deleteById(id);
+    if (!deleted) {
+      throw new NotFoundError(
+        `Operacion con id ${id} no se pudo eliminar`
+      );
     }
+
+    if (objetivoId) {
+      await this.recalcularObjetivo(objetivoId, userId);
+    }
+
+    return { success: true, message: "Operacion eliminada correctamente" };
+  }
+
+  // ----------------------------------------------------------------------
+  // LÓGICA DE OBJETIVOS
+  // ----------------------------------------------------------------------
+
+  private async recalcularObjetivo(objetivoId: string, userId: string) {
+    const objetivo = await this.objetivoRepository.findByIdAndUser(
+      objetivoId,
+      userId
+    );
+    if (!objetivo) return;
+
+    const total = await this.operacionRepository.calcularMontoTotalPorObjetivo(
+      objetivoId,
+      userId
+    );
+
+    let nuevoEstado = objetivo.estado;
+    if (nuevoEstado !== EstadoObjetivo.CANCELADO) {
+      nuevoEstado =
+        total >= objetivo.montoObjetivo
+          ? EstadoObjetivo.COMPLETADO
+          : EstadoObjetivo.PENDIENTE;
+    }
+
+    await this.objetivoRepository.updateMontoYEstado(
+      objetivoId,
+      total,
+      nuevoEstado
+    );
+  }
+
+  // ----------------------------------------------------------------------
+  // DTO MAPPING
+  // ----------------------------------------------------------------------
+
+  private toDTO(operacion: Operacion) {
+    return {
+      id: operacion.id || (operacion as any)._id,
+      descripcion: operacion.descripcion,
+      monto: operacion.monto,
+      categoria: operacion.categoria,
+      billetera: operacion.billetera,
+      fecha: operacion.fecha,
+      tipo: operacion.tipo,
+      objetivo: operacion.objetivo,
+      user: operacion.user
+        ? {
+            id: (operacion.user as any)._id,
+            nombre: (operacion.user as any).nombre,
+            email: (operacion.user as any).email,
+          }
+        : null,
+    };
+  }
 }

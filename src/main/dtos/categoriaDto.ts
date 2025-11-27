@@ -10,3 +10,4 @@ export class CategoriaDto {
     
     user: UsuarioReferenciaDto | null; 
 }
+
