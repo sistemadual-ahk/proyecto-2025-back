@@ -1,13 +1,14 @@
 import { Billetera } from "../models/entities/billetera";
 import { RepositorioDeBilleteras } from "@models/repositories/repositorioDeBilleteras";
-import { ValidationError, NotFoundError, ConflictError} from "../middlewares/error.middleware";
+import { ValidationError, NotFoundError, ConflictError } from "../middlewares/error.middleware";
 import { RepositorioDeUsuarios } from "@models/repositories";
+import { Types } from "mongoose";
 
 export class BilleteraService {
   constructor(
     private billeteraRepository: RepositorioDeBilleteras,
     private userRepository: RepositorioDeUsuarios
-  ) {}
+  ) { }
 
   async findAll() {
     const billeteras = await this.billeteraRepository.findAll();
@@ -23,22 +24,22 @@ export class BilleteraService {
   }
 
   async findDefaultForUser(userId?: string) {
-  if (!userId) {
-    throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
-  }
-  const billeteras = await this.billeteraRepository.findAllForUser(userId);
+    if (!userId) {
+      throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
+    }
+    const billeteras = await this.billeteraRepository.findAllForUser(userId);
 
-  if (!billeteras || billeteras.length === 0) {
-    throw new NotFoundError(`El usuario ${userId} no tiene billeteras`);
-  }
-  const billeteraDefault = billeteras.find((b) => b.isDefault === true);
+    if (!billeteras || billeteras.length === 0) {
+      throw new NotFoundError(`El usuario ${userId} no tiene billeteras`);
+    }
+    const billeteraDefault = billeteras.find((b) => b.isDefault === true);
 
-  if (!billeteraDefault) {
-    throw new NotFoundError(`El usuario ${userId} no tiene una billetera default`);
-  }
+    if (!billeteraDefault) {
+      throw new NotFoundError(`El usuario ${userId} no tiene una billetera default`);
+    }
 
-  return this.toDTO(billeteraDefault);
-}
+    return this.toDTO(billeteraDefault);
+  }
 
   async findById(id: string) {
     const billetera = await this.billeteraRepository.findById(id);
@@ -95,29 +96,43 @@ export class BilleteraService {
     return this.toDTO(resultado);
   }
 
-  async updateDefault(id: string) {
-    const billeteraDefaultNueva = await this.billeteraRepository.findById(id);
-    if (!billeteraDefaultNueva)
-      throw new NotFoundError(`Nueva billetera con id ${id} no encontrada`);
 
-    const billeteraDefault = await this.billeteraRepository.findDefault();
-    if (!billeteraDefault)
-      throw new NotFoundError(`Billetera con id ${id} no encontrada`);
+  async updateDefault(nuevaDefaultId: string, viejaDefaultId?: string, userId?: string) {
+    if (!userId) {
+      throw new NotFoundError(`Usuario con id ${userId} no encontrado`);
+    }
 
-    const actualizado = {
-      id: id,
-      isDefault: true,
-    };
+    // 1. Buscar todas las billeteras del usuario
+    const billeteras = await this.billeteraRepository.findAllForUser(userId);
 
-    const defaultViejo = {
-      id: billeteraDefault.id,
-      isDefault: false,
-    };
+    if (!billeteras || billeteras.length === 0) {
+      throw new NotFoundError(`El usuario ${userId} no tiene billeteras`);
+    }
 
-    this.billeteraRepository.save(defaultViejo);
-    const resultado = await this.billeteraRepository.save(actualizado);
-    return this.toDTO(resultado);
+    // 2. Desmarcar la vieja default si existe
+    if (viejaDefaultId) {
+      await this.billeteraRepository.save({ id: viejaDefaultId, isDefault: false });
+    } else {
+      // Si no se pasa viejaDefaultId, buscar la actual default
+      const actualDefault = billeteras.find(b => b.isDefault);
+      if (actualDefault) {
+        await this.billeteraRepository.save({ id: actualDefault.id, isDefault: false });
+      }
+    }
+
+    // 3. Marcar la nueva como default
+    const nuevaDefault = billeteras.find(b => b.id === nuevaDefaultId);
+    if (!nuevaDefault) {
+      throw new NotFoundError(`La billetera ${nuevaDefaultId} no pertenece al usuario ${userId}`);
+    }
+
+    await this.billeteraRepository.save({ id: nuevaDefaultId, isDefault: true });
+
+    // 4. Retornar la nueva default
+    return this.toDTO(nuevaDefault);
   }
+
+
 
   async delete(id: string) {
     const deleted = await this.billeteraRepository.deleteById(id);
