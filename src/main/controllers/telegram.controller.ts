@@ -445,14 +445,19 @@ if (!session.user) {
 }
 
 if (!user) {
+    const message =
+        `⚠️ No estás registrado/vinculado\. No puedo guardar tus operaciones\.\n\n` +
+        `👉 Debes iniciar sesión en la app de Gastify y poner tu ID de Telegram en la **configuración**\.\n\n` +
+        `Tu ID de Telegram es: \`${userIdTelegram}\``;
+
     await bot.sendMessage(
         chatId,
-        `⚠️ No estás registrado/vinculado. No puedo guardar tus operaciones.\n\n` +
-        `👉 Debes iniciar sesión en la app de Gastify y poner tu ID de Telegram en la configuración.\n\n` +
-        `Tu ID de Telegram es: ${userIdTelegram}`
+        message,
+        { parse_mode: 'MarkdownV2' }
     );
     return;
 }
+console.log(">>> CARGANDO TELEGRAM CONTROLLER (ACTUALIZADO)");
 
 
             const originalMessageId = sessionData.originalMessageId;
