@@ -26,12 +26,11 @@ export class UsuarioService {
         return usuarios.map((u) => this.toDTO(u));
     }
 
-
-        async findByAuthId(authId: string) {
-            const usuario = await this.usuarioRepository.findByAuthId(authId);
-            if (!usuario) throw new NotFoundError(`Usuario con authId ${authId} no encontrado`);
-            return this.toDTO(usuario);
-        }
+    async findByAuthId(authId: string) {
+        const usuario = await this.usuarioRepository.findByAuthId(authId);
+        if (!usuario) throw new NotFoundError(`Usuario con authId ${authId} no encontrado`);
+        return this.toDTO(usuario);
+    }
 
     async findById(id: string) {
         const usuario = await this.usuarioRepository.findById(id);

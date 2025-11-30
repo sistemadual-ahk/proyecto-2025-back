@@ -29,12 +29,13 @@ export class UsuarioController extends BaseController {
     });
 
     getUsuarioActual = asyncHandler(async (req: RequestWithAuth, res: Response) => {
-        const authId = req.dbUser?.sub; // viene del token si usás Auth0
+        const authId = req.auth?.sub; // viene del token si usás Auth0
         if (!authId) throw new ValidationError("Usuario no autenticado");
 
         const usuario = await this.usuarioService.findByAuthId(authId);
         return this.sendSuccess(res, 200, usuario, "Usuario actual obtenido exitosamente");
     });
+
     getSimilarUsuarioBySueldo = asyncHandler(async (req: Request, res: Response) => {
         const { sueldo, id, count } = req.query;
         const cantUsuarios = count ? Number(count) : 1;
