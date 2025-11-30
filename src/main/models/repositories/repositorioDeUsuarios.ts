@@ -24,6 +24,12 @@ export class RepositorioDeUsuarios {
         return usuario as unknown as Usuario | null;
     }
 
+    async findByAuthId(authId: string): Promise<Usuario | null> {
+        const usuario = await this.model.findOne({ auth0Id: authId });
+        return usuario as unknown as Usuario | null;
+    }
+
+
     async findByTelegramId(telegramId: string): Promise<Usuario | null> {
         const usuario = await this.model.findOne({ telegramId });
         return usuario as unknown as Usuario | null;

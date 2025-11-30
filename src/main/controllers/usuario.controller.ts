@@ -28,6 +28,13 @@ export class UsuarioController extends BaseController {
         return this.sendSuccess(res, 200, usuario, "Usuario encontrado exitosamente");
     });
 
+    getUsuarioActual = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const authId = req.dbUser?.sub; // viene del token si usás Auth0
+        if (!authId) throw new ValidationError("Usuario no autenticado");
+
+        const usuario = await this.usuarioService.findByAuthId(authId);
+        return this.sendSuccess(res, 200, usuario, "Usuario actual obtenido exitosamente");
+    });
     getSimilarUsuarioBySueldo = asyncHandler(async (req: Request, res: Response) => {
         const { sueldo, id, count } = req.query;
         const cantUsuarios = count ? Number(count) : 1;
@@ -105,7 +112,7 @@ export class UsuarioController extends BaseController {
         // Soporta tanto "año" como "anio" para evitar problemas con caracteres especiales en URLs
         const mesParam = req.query['mes'] || req.query['month'];
         const añoParam = req.query['año'] || req.query['anio'] || req.query['year'];
-        
+
         const mes = mesParam ? Number(mesParam) : undefined;
         const año = añoParam ? Number(añoParam) : undefined;
 

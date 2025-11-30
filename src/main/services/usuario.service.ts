@@ -15,16 +15,23 @@ interface Ubicacion {
 
 export class UsuarioService {
     constructor(
-        private usuarioRepository: RepositorioDeUsuarios, 
+        private usuarioRepository: RepositorioDeUsuarios,
         private provinciaService: ProvinciaService,
         private operacionService: OperacionService,
         private categoriaService: CategoriaService
-    ) {}
+    ) { }
 
     async findAll() {
         const usuarios = await this.usuarioRepository.findAll();
         return usuarios.map((u) => this.toDTO(u));
     }
+
+
+        async findByAuthId(authId: string) {
+            const usuario = await this.usuarioRepository.findByAuthId(authId);
+            if (!usuario) throw new NotFoundError(`Usuario con authId ${authId} no encontrado`);
+            return this.toDTO(usuario);
+        }
 
     async findById(id: string) {
         const usuario = await this.usuarioRepository.findById(id);
