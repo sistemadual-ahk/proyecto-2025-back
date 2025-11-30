@@ -143,5 +143,4 @@ Responde ÚNICAMENTE con un JSON válido: {"monto": NUMERO, "fecha": "DD-MM-YYYY
       console.error('❌ Error al borrar datos:', error);
     }
   }
- }
-
+}

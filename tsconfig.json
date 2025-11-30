@@ -19,6 +19,7 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "noUnusedLocals": false,
+    "noEmit": true,
     "noUnusedParameters": false,
     "exactOptionalPropertyTypes": false,
     "noImplicitOverride": true,
