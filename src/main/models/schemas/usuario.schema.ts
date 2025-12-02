@@ -45,6 +45,11 @@ const usuarioSchema = new mongoose.Schema(
             required: false,
             min: 0,
         },
+        situacionLaboral: {
+            type: String,
+            required: false,
+            trim: true,
+        },
         profesion: {
             type: String,
             required: false,

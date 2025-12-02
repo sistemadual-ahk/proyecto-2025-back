@@ -3,9 +3,9 @@ import { Usuario, UsuarioWithMatchBy } from "../entities/usuario";
 import mongoose from "mongoose";
 import { accentInsensitiveRegex } from "main/utils/regexAccent";
 interface Ubicacion {
-    provincia: string;
-    municipio: string;
-    localidad: string;
+    provincia: string | null;
+    municipio: string | null;
+    localidad: string | null;
 }
 export class RepositorioDeUsuarios {
     private model: typeof UsuarioModel;
@@ -37,7 +37,7 @@ export class RepositorioDeUsuarios {
 
     async findSimilarBySueldo(sueldo: number, id: string, count: number = 1): Promise<Usuario[] | null> {
         const usuarios = await this.model.aggregate([
-            { $match: { _id: { $ne: new mongoose.Types.ObjectId(id) } } }, // exclude the user with the given id
+            { $match: { _id: { $ne: new mongoose.Types.ObjectId(id) }, sueldo: { $ne: null } } }, // exclude the user with the given id
             {
                 $addFields: {
                     diff: { $abs: { $subtract: ["$sueldo", sueldo] } }, // compute |value - target|
@@ -45,7 +45,23 @@ export class RepositorioDeUsuarios {
             },
             { $sort: { diff: 1 } }, // smallest difference first
             { $limit: count }, // keep only the closest N
+            {
+                $project: {
+                    //diff: 0,
+                    auth0Id: 1,
+                    telegramId: 1,
+                    name: 1,
+                    mail: 1,
+                    phoneNumber: 1,
+                    sueldo: 1,
+                    profesion: 1,
+                    estadoCivil: 1,
+                    ubicacion: 1,
+                    _id: 1,
+                },
+            },
         ]);
+        console.log(usuarios);
         return usuarios as unknown as Usuario[] | null;
     }
 
@@ -133,6 +149,8 @@ export class RepositorioDeUsuarios {
         const usuarios = await this.model.aggregate(pipeline);
         return usuarios as unknown as UsuarioWithMatchBy[] | null;
     }
+
+    async findCandidateUsuarioForComparison(id: string, criterios: CriteriosComparacionDTO);
 
     async findByEmail(mail: string): Promise<Usuario | null> {
         const usuario = await this.model.findOne({ mail });

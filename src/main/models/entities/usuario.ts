@@ -11,6 +11,7 @@ export class Usuario {
         municipio?: string | null;
         localidad?: string | null;
     };
+    situacionLaboral?: string | null;
     sueldo?: number | null;
     profesion?: string | null;
     estadoCivil?: string | null;

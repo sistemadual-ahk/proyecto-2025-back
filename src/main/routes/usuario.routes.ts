@@ -7,10 +7,14 @@ export const createUsuarioRoutes = (usuarioController: UsuarioController): Route
     const router = Router();
 
     router.get("/", usuarioController.getAllUsuarios);
-    
+
     // endpoint para comparar usuarios (debe ir antes de /:id para evitar conflictos)
-    router.get("/comparar/:idUsuarioComparar", usuarioController.compararUsuarios);
-    
+    // router.get("/comparar/:idUsuarioComparar", usuarioController.compararUsuarios);
+    router.get("/comparar/", usuarioController.compararUsuarios);
+
+    //* endpoint para comparacion directa con criterios
+    router.get("/compararporcriterios", usuarioController.compararPorCriterios);
+
     // endpoint para similares (TESTING)
     router.get("/similar/sueldo", usuarioController.getSimilarUsuarioBySueldo);
     router.get("/similar/profesion", usuarioController.getSimilarUsuarioByProfesion);

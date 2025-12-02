@@ -24,3 +24,13 @@ export interface ComparacionUsuariosResponseDto {
     usuarios: ComparacionUsuarioDto[];
 }
 
+export interface CriteriosComparacionDTO {
+    // si es null no se usa el criterio
+    sueldo: boolean | null;
+    profesion: string | null;
+    ubicacion: {
+        provincia: string | null;
+        municipio: string | null;
+        localidad: string | null;
+    } | null;
+}
