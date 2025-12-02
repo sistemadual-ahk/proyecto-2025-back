@@ -61,7 +61,7 @@ export class RepositorioDeUsuarios {
                 },
             },
         ]);
-        console.log(usuarios);
+        // console.log(usuarios);
         return usuarios as unknown as Usuario[] | null;
     }
 
@@ -79,6 +79,7 @@ export class RepositorioDeUsuarios {
 
         // 🧮 Aggregation pipeline
         // 🧱 Base pipeline
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const pipeline: any[] = [
             // 1️⃣ Exclude the same user
             { $match: { _id: { $ne: new mongoose.Types.ObjectId(id) } } },
@@ -150,7 +151,7 @@ export class RepositorioDeUsuarios {
         return usuarios as unknown as UsuarioWithMatchBy[] | null;
     }
 
-    async findCandidateUsuarioForComparison(id: string, criterios: CriteriosComparacionDTO): Promise<Usuario[]> {
+    async findCandidateUsuarioForComparison(_id: string, _criterios: CriteriosComparacionDTO): Promise<Usuario[]> {
         const usuarios = await this.model.find();
         return usuarios as unknown as Usuario[];
     }
