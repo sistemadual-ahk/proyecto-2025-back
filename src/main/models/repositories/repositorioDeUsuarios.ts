@@ -2,6 +2,7 @@ import { UsuarioModel } from "../schemas/usuario.schema";
 import { Usuario, UsuarioWithMatchBy } from "../entities/usuario";
 import mongoose from "mongoose";
 import { accentInsensitiveRegex } from "main/utils/regexAccent";
+import { CriteriosComparacionDTO } from "main/dtos/comparacionUsuarioDto";
 interface Ubicacion {
     provincia: string | null;
     municipio: string | null;
@@ -28,7 +29,6 @@ export class RepositorioDeUsuarios {
         const usuario = await this.model.findOne({ auth0Id: authId });
         return usuario as unknown as Usuario | null;
     }
-
 
     async findByTelegramId(telegramId: string): Promise<Usuario | null> {
         const usuario = await this.model.findOne({ telegramId });
@@ -73,9 +73,9 @@ export class RepositorioDeUsuarios {
     async findSimilarByUbicacion(ubicacion: Ubicacion, id: string, count: number = 1, exactitud: string = "provincia"): Promise<UsuarioWithMatchBy[] | null> {
         const { provincia, municipio, localidad } = ubicacion;
         // 🧩 Build accent-insensitive regexes
-        const provinciaRegex = accentInsensitiveRegex(provincia);
-        const municipioRegex = accentInsensitiveRegex(municipio);
-        const localidadRegex = accentInsensitiveRegex(localidad);
+        const provinciaRegex = accentInsensitiveRegex(provincia!);
+        const municipioRegex = accentInsensitiveRegex(municipio!);
+        const localidadRegex = accentInsensitiveRegex(localidad!);
 
         // 🧮 Aggregation pipeline
         // 🧱 Base pipeline
@@ -150,7 +150,10 @@ export class RepositorioDeUsuarios {
         return usuarios as unknown as UsuarioWithMatchBy[] | null;
     }
 
-    async findCandidateUsuarioForComparison(id: string, criterios: CriteriosComparacionDTO);
+    async findCandidateUsuarioForComparison(id: string, criterios: CriteriosComparacionDTO): Promise<Usuario[]> {
+        const usuarios = await this.model.find();
+        return usuarios as unknown as Usuario[];
+    }
 
     async findByEmail(mail: string): Promise<Usuario | null> {
         const usuario = await this.model.findOne({ mail });
