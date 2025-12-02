@@ -5,7 +5,7 @@ import { ProvinciaService } from "./ubicacion/provincia.service";
 import { ubicacionToDebugString } from "main/utils/debugUtils";
 import { OperacionService } from "./operacion.service";
 import { CategoriaService } from "./categoria.service";
-import { ComparacionUsuarioDto, ComparacionUsuariosResponseDto, CategoriaComparacionDto } from "../dtos/comparacionUsuarioDto";
+import { ComparacionUsuarioDto, ComparacionUsuariosResponseDto, CategoriaComparacionDto, CriteriosComparacionDTO } from "../dtos/comparacionUsuarioDto";
 
 interface Ubicacion {
     provincia: string;
@@ -194,7 +194,7 @@ export class UsuarioService {
         const categoriasComparar = await this.categoriaService.findAllForUser(usuarioCompararId);
 
         // Filtrar solo categorías default
-        const categoriasDefault = categoriasActual.filter(c => c.isDefault);
+        const categoriasDefault = categoriasActual.filter((c) => c.isDefault);
 
         // Procesar datos del usuario actual
         const datosActual = this.procesarDatosUsuario(
@@ -217,17 +217,138 @@ export class UsuarioService {
         };
     }
 
-    private procesarDatosUsuario(
-        usuario: Usuario,
-        operaciones: any[],
-        categoriasDefault: any[],
-        incluirNombre: boolean
-    ): ComparacionUsuarioDto {
+    async compararUsuarioPorCriterios(usuarioActualId: string, criterios: CriteriosComparacionDTO) {
+        const usuarioActual = await this.usuarioRepository.findById(usuarioActualId);
+        if (!usuarioActual) {
+            throw new NotFoundError(`Usuario actual con id ${usuarioActualId} no encontrado`);
+        }
+
+        const candidato = await this.encontrarCandidatoParaComparacion(usuarioActualId, criterios);
+        if (!candidato) {
+            throw new NotFoundError("No se encontró ningún usuario que coincida con los criterios proporcionados");
+        }
+
+        const comparacion = await this.compararUsuarios(usuarioActualId, candidato.id);
+
+        // TODO retornar solo la comparacion entre ambos usuarios
+        return { usuarioActual: this.toDTO(usuarioActual), candidato: this.toDTO(candidato), comparacion };
+    }
+
+    async encontrarCandidatoParaComparacion(usuarioActualId: string, criterios: CriteriosComparacionDTO): Promise<Usuario | null> {
+        const usuarioActual = await this.usuarioRepository.findById(usuarioActualId);
+        if (!usuarioActual) {
+            throw new NotFoundError(`Usuario actual con id ${usuarioActualId} no encontrado`);
+        }
+
+        // ? Lista de candidatos
+        const candidatos: Usuario[] | null = [];
+
+        // * profesion
+        if (criterios.profesion && typeof criterios.profesion === "string") {
+            const simil = (await this.usuarioRepository.findSimilarByProfesion(criterios.profesion, usuarioActualId)) ?? []; // si no encuentra, defaultea a array vacio
+            candidatos.push(...simil);
+        }
+
+        // * sueldo
+        if (criterios.sueldo && typeof criterios.sueldo === "boolean") {
+            const simil = (await this.usuarioRepository.findSimilarBySueldo(usuarioActual.sueldo || 0, usuarioActualId)) ?? [];
+            candidatos.push(...simil);
+        }
+
+        // * ubicacion
+        if (criterios.ubicacion) {
+            const { provincia, municipio, localidad } = criterios.ubicacion;
+
+            // Al menos un nivel de ubicación activado
+            const algunNivel = provincia || municipio || localidad;
+
+            if (algunNivel) {
+                const simil = (await this.usuarioRepository.findSimilarByUbicacion(criterios.ubicacion, usuarioActualId)) ?? [];
+
+                candidatos.push(...simil);
+            }
+        }
+
+        // TODO rankear los usuarios y retornar el mejor candidato
+        const candidatosRankeados = this.rankearCandidatos(usuarioActual, candidatos, criterios) ?? [];
+
+        if (candidatosRankeados.length == 0) {
+            // ? deberia tirar error o devolver array vacio?
+            // throw new NotFoundError("No candidates matched the criteria.");
+            return null;
+        }
+
+        const LIMITE_TOP_CANDIDATOS = 3;
+        const topCandidatos = candidatosRankeados.slice(0, LIMITE_TOP_CANDIDATOS);
+
+        return topCandidatos[Math.floor(Math.random() * topCandidatos.length)]!;
+    }
+
+    private rankearCandidatos(usuarioActual: Usuario, candidatos: Usuario[], criterios: CriteriosComparacionDTO): Usuario[] | null {
+        // ? criterios weighted
+        const pesos = {
+            profesion: 100,
+            sueldo: 60,
+            localidad: 30,
+            municipio: 20,
+            provincia: 10,
+        };
+
+        const map = new Map<string, { usuario: Usuario; score: number }>();
+
+        for (const c of candidatos) {
+            if (!map.has(c.id)) {
+                map.set(c.id, { usuario: c, score: 0 });
+            }
+
+            const entry = map.get(c.id)!;
+
+            if (criterios.profesion && c.profesion == criterios.profesion) {
+                entry.score += pesos.profesion;
+            }
+
+            if (criterios.sueldo == true && usuarioActual.sueldo != null && c.sueldo != null) {
+                entry.score += pesos.sueldo;
+            }
+
+            if (criterios.ubicacion) {
+                const base = criterios.ubicacion;
+
+                // Coincidencia provincia
+                if (base.provincia && c.ubicacion?.provincia === base.provincia) {
+                    entry.score += pesos.provincia;
+                }
+
+                // Coincidencia municipio
+                if (base.municipio && c.ubicacion?.municipio === base.municipio) {
+                    entry.score += pesos.municipio;
+                }
+
+                // Coincidencia localidad
+                if (base.localidad && c.ubicacion?.localidad === base.localidad) {
+                    entry.score += pesos.localidad;
+                }
+            }
+        }
+
+        // ordenar el scoring
+
+        const ordenados = Array.from(map.values())
+            .sort((a, b) => b.score - a.score)
+            .map((entry) => entry.usuario); // devuelve solo la parte de usuario
+
+        if (ordenados.length == 0) {
+            return [];
+        }
+        return ordenados;
+    }
+
+    private procesarDatosUsuario(usuario: Usuario, operaciones: any[], categoriasDefault: any[], incluirNombre: boolean): ComparacionUsuarioDto {
         // Agrupar operaciones por categoría y calcular montos totales
         const categoriasMap = new Map<string, { nombre: string; montoTotal: number }>();
 
         // Inicializar todas las categorías default con monto 0
-        categoriasDefault.forEach(cat => {
+        categoriasDefault.forEach((cat) => {
             const catId = cat.id || (cat as any)._id?.toString() || String((cat as any)._id);
             if (catId) {
                 categoriasMap.set(catId, {
@@ -241,7 +362,7 @@ export class UsuarioService {
         let primeraFecha: Date | null = null;
         let ultimaFecha: Date | null = null;
 
-        operaciones.forEach(op => {
+        operaciones.forEach((op) => {
             const categoria = op.categoria;
             if (!categoria) return;
 

@@ -3,6 +3,7 @@ import { UsuarioService } from "@services/usuario.service";
 import { asyncHandler, ValidationError } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
 import { RequestWithAuth } from "@middlewares/sync-user.middleware";
+import { CriteriosComparacionDTO } from "main/dtos/comparacionUsuarioDto";
 
 export class UsuarioController extends BaseController {
     constructor(private usuarioService: UsuarioService) {
@@ -104,7 +105,9 @@ export class UsuarioController extends BaseController {
             throw new ValidationError("No se pudo determinar el usuario actual desde el token de autenticación");
         }
 
-        const { idUsuarioComparar } = req.params;
+        // ! placeholder
+        // const { idUsuarioComparar } = req.params;
+        const idUsuarioComparar = "68dfef090af65bc324c60f97";
         if (!idUsuarioComparar) {
             throw new ValidationError("ID del usuario a comparar es requerido");
         }
@@ -129,13 +132,38 @@ export class UsuarioController extends BaseController {
             }
         }
 
-        const comparacion = await this.usuarioService.compararUsuarios(
-            usuarioActualId.toString(),
-            idUsuarioComparar,
-            mes,
-            año
-        );
+        // const comparacion = await this.usuarioService.compararUsuarios(usuarioActualId.toString(), idUsuarioComparar, mes, año);
+        // ! placeholder comparacion
+        const comparacion = await this.usuarioService.compararUsuarios(usuarioActualId.toString(), idUsuarioComparar, mes, año);
 
         return this.sendSuccess(res, 200, comparacion, "Comparación de usuarios realizada exitosamente");
+    });
+
+    compararPorCriterios = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+        const usuarioActualId = req.dbUser?.id || (req.dbUser as any)?._id?.toString();
+        console.log("Usuario actual ID:", usuarioActualId);
+        if (!usuarioActualId) {
+            throw new ValidationError("No se pudo determinar el usuario actual desde el token de autenticación");
+        }
+
+        const criterios = req.body as CriteriosComparacionDTO;
+        if (!criterios) {
+            throw new ValidationError("Criterios de comparación son requeridos");
+        }
+
+        // validar estructura ubicacion if exists
+        if (criterios.ubicacion !== null && criterios.ubicacion !== undefined) {
+            const { provincia, municipio, localidad } = criterios.ubicacion;
+
+            const estructuraValida = (typeof provincia === "string" || provincia === null) && (typeof municipio === "string" || municipio === null) && (typeof localidad === "string" || localidad === null);
+
+            if (!estructuraValida) {
+                throw new ValidationError("Estructura de ubicación inválida en criterios de comparación");
+            }
+        }
+
+        const resultado = await this.usuarioService.compararUsuarioPorCriterios(usuarioActualId.toString(), criterios);
+
+        return this.sendSuccess(res, 200, resultado, "Comparación de usuarios por criterios realizada exitosamente");
     });
 }
