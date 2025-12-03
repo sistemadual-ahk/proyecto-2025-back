@@ -12,6 +12,16 @@ export class OperacionController extends BaseController {
     super();
   }
 
+  getAnalysisData = asyncHandler(async (req: RequestWithAuth, res: Response) => {
+    const { periodo, fecha } = req.query as { periodo: string, fecha: string };
+    const userId = req.dbUser?.id;
+
+    // Llama a la lógica pesada
+    const data = await this.operacionService.calculateAnalysisData(userId!, periodo as any, fecha);
+    
+    return this.sendSuccess(res, 200, data);
+});
+
   getAllOperaciones = asyncHandler(
     async (req: RequestWithAuth, res: Response) => {
       const { tipo, categoriaId, billeteraId, desde, hasta } = req.query as any;

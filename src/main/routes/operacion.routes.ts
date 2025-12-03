@@ -5,6 +5,8 @@ export const createOperacionRoutes = (operacionController: OperacionController):
     const router = Router();
 
     router.get('/', operacionController.getAllOperaciones);
+    
+    router.get('/analisis', operacionController.getAnalysisData);
 
     router.get('/egresos', operacionController.getAllOperacionesEgresos);
 
