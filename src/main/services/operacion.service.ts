@@ -15,7 +15,7 @@ import { EstadoObjetivo } from "@models/entities/objetivo";
 type OperacionInputData = {
   monto: number;
   tipo: string;
-  billeteraId: string;
+  billeteraId?: string;
   categoriaId: string;
   user?: string;
   descripcion?: string;
@@ -127,11 +127,20 @@ export class OperacionService {
       objetivo,
     } = operacionData;
 
-    if (!monto || !tipo || !user || !billeteraId || !categoriaId) {
+    // billeteraId deja de ser siempre obligatorio
+    if (!monto || !tipo || !user || !categoriaId) {
       throw new ValidationError(
-        "Monto, tipo, usuario, billeteraId y categoriaId son requeridos"
+        "Monto, tipo, usuario y categoriaId son requeridos"
       );
     }
+
+    // Si NO hay objetivo ⇒ billeteraId es obligatorio
+    if (!billeteraId && !objetivo) {
+      throw new ValidationError(
+        "billeteraId es requerido si la operación no está asociada a un objetivo"
+      );
+    }
+
     if (monto === 0) {
       throw new ValidationError("El monto de la operacion no debe ser 0");
     }
@@ -147,14 +156,6 @@ export class OperacionService {
     } else {
       throw new ValidationError(`El tipo de operacion '${tipo}' no es válido.`);
     }
-
-    const billeteraRecuperada = await this.billeteraRepository.findById(
-      billeteraId as string
-    );
-    if (!billeteraRecuperada)
-      throw new NotFoundError(
-        `Billetera con ID ${billeteraId} no encontrada`
-      );
 
     const categoriaRecuperada = await this.categoriaRepository.findById(
       categoriaId as string
@@ -181,6 +182,28 @@ export class OperacionService {
       }
     }
 
+    // Resolver billetera:
+    // - Si hay objetivo ⇒ SIEMPRE billetera default del usuario
+    // - Si no hay objetivo ⇒ usamos billeteraId recibido
+    let billeteraRecuperada: any;
+
+    if (objetivo) {
+      billeteraRecuperada = await this.billeteraRepository.findDefault(user);
+      if (!billeteraRecuperada) {
+        throw new NotFoundError(
+          `El usuario ${user} no tiene una billetera default`
+        );
+      }
+    } else {
+      billeteraRecuperada = await this.billeteraRepository.findById(
+        billeteraId as string
+      );
+      if (!billeteraRecuperada)
+        throw new NotFoundError(
+          `Billetera con ID ${billeteraId} no encontrada`
+        );
+    }
+
     const nuevaOperacion = new Operacion();
     nuevaOperacion.monto = monto;
     nuevaOperacion.descripcion = descripcion;
@@ -198,6 +221,8 @@ export class OperacionService {
 
     const billeteraAActualizar = billeteraRecuperada;
 
+    // Egreso ⇒ sale dinero de la billetera
+    // Ingreso ⇒ entra dinero a la billetera
     if (tipoFinal === "Ingreso") {
       billeteraAActualizar.ingresoHistorico += monto;
     } else if (tipoFinal === "Egreso") {
@@ -336,158 +361,153 @@ export class OperacionService {
   // ----------------------------------------------------------------------
 
   private generateIntervals(period: AnalysisPeriod, dateStr: string) {
-        const referenceDate = new Date(dateStr);
-        // Validar fecha invalida
-        if (isNaN(referenceDate.getTime())) {
-            throw new ValidationError("Fecha proporcionada inválida");
-        }
-
-        const labels: string[] = [];
-        const buckets: Date[] = [];
-        
-        let desde = new Date(referenceDate);
-        let hasta = new Date(referenceDate);
-        desde.setHours(0, 0, 0, 0);
-
-        if (period === 'weekly') {
-            // Lógica Semanal (Lun-Dom)
-            const day = desde.getDay(); 
-            // getDay() devuelve 0 para Domingo. Queremos que Lunes sea el inicio.
-            // Si es Domingo (0), restamos 6 días. Si es otro, restamos (day - 1).
-            const diff = day === 0 ? 6 : day - 1; 
-            desde.setDate(desde.getDate() - diff); // Lunes de esa semana
-            
-            hasta = new Date(desde);
-            hasta.setDate(desde.getDate() + 6); // Domingo
-            hasta.setHours(23, 59, 59, 999);
-
-            const temp = new Date(desde);
-            const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-            
-            for (let i = 0; i < 7; i++) {
-                labels.push(days[i]!);
-                buckets.push(new Date(temp));
-                temp.setDate(temp.getDate() + 1);
-            }
-            buckets.push(new Date(hasta)); // Límite final
-
-        } else if (period === 'monthly') {
-            // Lógica Mensual (Ene-Dic del año seleccionado)
-            desde = new Date(referenceDate.getFullYear(), 0, 1);
-            hasta = new Date(referenceDate.getFullYear(), 11, 31, 23, 59, 59);
-
-            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            const temp = new Date(desde);
-            
-            for (let i = 0; i < 12; i++) {
-                labels.push(months[i]!);
-                buckets.push(new Date(temp));
-                temp.setMonth(temp.getMonth() + 1);
-            }
-            // Importante: El último bucket límite es el inicio del año siguiente o fin de este
-            buckets.push(new Date(referenceDate.getFullYear() + 1, 0, 1)); 
-
-        } else if (period === 'annual') {
-            // Lógica Anual (5 años atrás + actual)
-            const endYear = referenceDate.getFullYear();
-            const startYear = endYear - 5;
-            
-            desde = new Date(startYear, 0, 1);
-            hasta = new Date(endYear, 11, 31, 23, 59, 59);
-
-            for (let i = 0; i <= 5; i++) {
-                const year = startYear + i;
-                labels.push(year.toString());
-                buckets.push(new Date(year, 0, 1));
-            }
-            buckets.push(new Date(endYear + 1, 0, 1));
-        }
-
-        return { desde, hasta, labels, buckets };
+    const referenceDate = new Date(dateStr);
+    // Validar fecha invalida
+    if (isNaN(referenceDate.getTime())) {
+      throw new ValidationError("Fecha proporcionada inválida");
     }
 
-    // ==========================================
-    // MÉTODO PÚBLICO: Calcular Datos
-    // ==========================================
-    public async calculateAnalysisData(
-        userId: string,
-        periodo: AnalysisPeriod,
-        fecha: string
-    ): Promise<AnalysisData> {
-        
-        // 1. Generar los intervalos de tiempo
-        const { desde, hasta, labels, buckets } = this.generateIntervals(periodo, fecha);
+    const labels: string[] = [];
+    const buckets: Date[] = [];
 
-        // 2. Obtener operaciones desde la BD
-        // Nota: Asegúrate de que findByFilters maneje objetos Date correctamente
-        const operacionesRaw = await this.operacionRepository.findByFilters({
-            userId,
-            desde,
-            hasta
-        });
+    let desde = new Date(referenceDate);
+    let hasta = new Date(referenceDate);
+    desde.setHours(0, 0, 0, 0);
 
-        // Convertir a 'any' para evitar pelear con tipos si 'categoria' no está en la entidad base strict
-        const operaciones = operacionesRaw as any[];
+    if (period === 'weekly') {
+      // Lógica Semanal (Lun-Dom)
+      const day = desde.getDay();
+      // getDay() devuelve 0 para Domingo. Queremos que Lunes sea el inicio.
+      // Si es Domingo (0), restamos 6 días. Si es otro, restamos (day - 1).
+      const diff = day === 0 ? 6 : day - 1;
+      desde.setDate(desde.getDate() - diff); // Lunes de esa semana
 
-        // 3. Estructura base de respuesta
-        const response: AnalysisData = {
-            monthlyData: new Array(labels.length).fill(0),
-            monthlyCategories: labels,
-            categoryData: [],
-            categoryLabels: [],
-            donutData: [],
-            donutLabels: [],
-            incomeData: new Array(labels.length).fill(0),
-            expensesData: new Array(labels.length).fill(0),
-            periodCategories: labels
-        };
+      hasta = new Date(desde);
+      hasta.setDate(desde.getDate() + 6); // Domingo
+      hasta.setHours(23, 59, 59, 999);
 
-        // 4. Mapas auxiliares para categorías
-        const categoryMap: Record<string, number> = {};
+      const temp = new Date(desde);
+      const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-        // 5. Procesamiento principal
-        operaciones.forEach(op => {
-            const opDate = new Date(op.fecha);
-            const monto = Number(op.monto); // Asegurar que es número
+      for (let i = 0; i < 7; i++) {
+        labels.push(days[i]!);
+        buckets.push(new Date(temp));
+        temp.setDate(temp.getDate() + 1);
+      }
+      buckets.push(new Date(hasta)); // Límite final
 
-            // A. Lógica de Categorías (Solo Egresos)
-            if (op.tipo === 'Egreso' && op.categoria) {
-                const catName = op.categoria.nombre || 'Sin Categoría';
-                categoryMap[catName] = (categoryMap[catName] || 0) + monto;
-            }
+    } else if (period === 'monthly') {
+      // Lógica Mensual (Ene-Dic del año seleccionado)
+      desde = new Date(referenceDate.getFullYear(), 0, 1);
+      hasta = new Date(referenceDate.getFullYear(), 11, 31, 23, 59, 59);
 
-            // B. Lógica de Tiempo (Intervalos)
-            // Encontrar en qué bucket cae la fecha
-            let index = -1;
-            for (let i = 0; i < buckets.length - 1; i++) {
-                // Si la fecha es >= inicio del bucket Y < inicio del siguiente bucket
-                if (opDate.getTime() >= buckets[i]!.getTime() && opDate.getTime() < buckets[i+1]!.getTime()) {
-                    index = i;
-                    break;
-                }
-            }
+      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const temp = new Date(desde);
 
-            // Si encontramos el índice, sumamos al array correspondiente
-            if (index !== -1) {
-                if (op.tipo === 'Ingreso') {
-                    response.incomeData[index]! += monto;
-                } else if (op.tipo === 'Egreso') {
-                    response.expensesData[index]! += monto;
-                    response.monthlyData[index]! += monto; // Asumimos que este gráfico muestra gastos
-                }
-            }
-        });
+      for (let i = 0; i < 12; i++) {
+        labels.push(months[i]!);
+        buckets.push(new Date(temp));
+        temp.setMonth(temp.getMonth() + 1);
+      }
+      // Importante: El último bucket límite es el inicio del año siguiente
+      buckets.push(new Date(referenceDate.getFullYear() + 1, 0, 1));
 
-        // 6. Finalizar datos de categorías
-        response.categoryLabels = Object.keys(categoryMap);
-        response.categoryData = Object.values(categoryMap);
-        
-        // Configuración Donut (Top 5 + Otros si quisieras, por ahora raw)
-        response.donutLabels = response.categoryLabels;
-        response.donutData = response.categoryData;
+    } else if (period === 'annual') {
+      // Lógica Anual (5 años atrás + actual)
+      const endYear = referenceDate.getFullYear();
+      const startYear = endYear - 5;
 
-        return response;
+      desde = new Date(startYear, 0, 1);
+      hasta = new Date(endYear, 11, 31, 23, 59, 59);
+
+      for (let i = 0; i <= 5; i++) {
+        const year = startYear + i;
+        labels.push(year.toString());
+        buckets.push(new Date(year, 0, 1));
+      }
+      buckets.push(new Date(endYear + 1, 0, 1));
     }
+
+    return { desde, hasta, labels, buckets };
+  }
+
+  // ==========================================
+  // MÉTODO PÚBLICO: Calcular Datos
+  // ==========================================
+  public async calculateAnalysisData(
+    userId: string,
+    periodo: AnalysisPeriod,
+    fecha: string
+  ): Promise<AnalysisData> {
+
+    // 1. Generar los intervalos de tiempo
+    const { desde, hasta, labels, buckets } = this.generateIntervals(periodo, fecha);
+
+    // 2. Obtener operaciones desde la BD
+    const operacionesRaw = await this.operacionRepository.findByFilters({
+      userId,
+      desde,
+      hasta
+    });
+
+    const operaciones = operacionesRaw as any[];
+
+    // 3. Estructura base de respuesta
+    const response: AnalysisData = {
+      monthlyData: new Array(labels.length).fill(0),
+      monthlyCategories: labels,
+      categoryData: [],
+      categoryLabels: [],
+      donutData: [],
+      donutLabels: [],
+      incomeData: new Array(labels.length).fill(0),
+      expensesData: new Array(labels.length).fill(0),
+      periodCategories: labels
+    };
+
+    // 4. Mapas auxiliares para categorías
+    const categoryMap: Record<string, number> = {};
+
+    // 5. Procesamiento principal
+    operaciones.forEach(op => {
+      const opDate = new Date(op.fecha);
+      const monto = Number(op.monto); // Asegurar que es número
+
+      // A. Lógica de Categorías (Solo Egresos)
+      if (op.tipo === 'Egreso' && op.categoria) {
+        const catName = op.categoria.nombre || 'Sin Categoría';
+        categoryMap[catName] = (categoryMap[catName] || 0) + monto;
+      }
+
+      // B. Lógica de Tiempo (Intervalos)
+      let index = -1;
+      for (let i = 0; i < buckets.length - 1; i++) {
+        if (opDate.getTime() >= buckets[i]!.getTime() && opDate.getTime() < buckets[i + 1]!.getTime()) {
+          index = i;
+          break;
+        }
+      }
+
+      if (index !== -1) {
+        if (op.tipo === 'Ingreso') {
+          response.incomeData[index]! += monto;
+        } else if (op.tipo === 'Egreso') {
+          response.expensesData[index]! += monto;
+          response.monthlyData[index]! += monto; // gráfico de gastos
+        }
+      }
+    });
+
+    // 6. Finalizar datos de categorías
+    response.categoryLabels = Object.keys(categoryMap);
+    response.categoryData = Object.values(categoryMap);
+
+    // Donut (por ahora igual a categorías)
+    response.donutLabels = response.categoryLabels;
+    response.donutData = response.categoryData;
+
+    return response;
+  }
 
   // ----------------------------------------------------------------------
   // DTO MAPPING

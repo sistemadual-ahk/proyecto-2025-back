@@ -173,7 +173,20 @@ export class RepositorioDeOperaciones {
 
     const resultado = await this.model.aggregate([
       { $match: match },
-      { $group: { _id: null, total: { $sum: "$monto" } } },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: {
+              $cond: [
+                { $eq: ["$tipo", "Egreso"] },
+                "$monto",
+                { $multiply: ["$monto", -1] },
+              ],
+            },
+          },
+        },
+      },
     ]);
 
     return resultado[0]?.total ?? 0;

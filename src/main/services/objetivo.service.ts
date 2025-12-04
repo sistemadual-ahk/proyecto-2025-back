@@ -87,7 +87,6 @@ export class ObjetivoService {
         `Billetera con ID ${billeteraId} no encontrada`
       );
 
-    // Opcional: validar que la billetera pertenezca al usuario
     if (
       (billeteraRecuperada as any).user &&
       (billeteraRecuperada as any).user._id &&
@@ -122,7 +121,11 @@ export class ObjetivoService {
     return this.toDTO(guardado);
   }
 
-  async update(id: string, objetivoData: Partial<Objetivo>, userId: string) {
+  async update(
+    id: string,
+    objetivoData: Partial<Objetivo> & { categoriaId?: string; billeteraId?: string },
+    userId: string
+  ) {
     const objetivoExistente = await this.objetivoRepository.findByIdAndUser(
       id,
       userId
@@ -132,19 +135,46 @@ export class ObjetivoService {
         `Objetivo con id ${id} no encontrado para este usuario`
       );
 
+    let categoriaFinal = objetivoExistente.categoria;
+    const categoriaIdPayload = (objetivoData as any).categoriaId;
+    if (categoriaIdPayload) {
+      const categoria = await this.categoriaRepository.findById(
+        categoriaIdPayload
+      );
+      if (!categoria) {
+        throw new NotFoundError(
+          `Categoria con ID ${categoriaIdPayload} no encontrada`
+        );
+      }
+      categoriaFinal = categoria;
+    }
+
+    let billeteraFinal = objetivoExistente.billetera;
+    const billeteraIdPayload = (objetivoData as any).billeteraId;
+    if (billeteraIdPayload) {
+      const billetera = await this.billeteraRepository.findById(
+        billeteraIdPayload
+      );
+      if (!billetera) {
+        throw new NotFoundError(
+          `Billetera con ID ${billeteraIdPayload} no encontrada`
+        );
+      }
+      billeteraFinal = billetera;
+    }
+
     const actualizado: Partial<Objetivo> = {
       id,
       titulo: objetivoData.titulo ?? objetivoExistente.titulo,
       montoObjetivo:
         objetivoData.montoObjetivo ?? objetivoExistente.montoObjetivo,
-      categoria: objetivoData.categoria ?? objetivoExistente.categoria,
-      billetera: objetivoData.billetera ?? objetivoExistente.billetera,
+      categoria: categoriaFinal,
+      billetera: billeteraFinal,
       fechaInicio: objetivoData.fechaInicio ?? objetivoExistente.fechaInicio,
       fechaEsperadaFinalizacion:
         objetivoData.fechaEsperadaFinalizacion ??
         objetivoExistente.fechaEsperadaFinalizacion,
       fechaFin: objetivoData.fechaFin ?? objetivoExistente.fechaFin,
-      // montoActual se recalcula desde operaciones
       montoActual: objetivoExistente.montoActual,
       estado: objetivoData.estado ?? objetivoExistente.estado,
       user: objetivoExistente.user,
@@ -152,18 +182,22 @@ export class ObjetivoService {
 
     const resultado = await this.objetivoRepository.save(actualizado);
 
-    // Recalcular montoActual y estado en función de las operaciones
     const total = await this.operacionRepository.calcularMontoTotalPorObjetivo(
       id,
       userId
     );
 
-    let nuevoEstado = resultado.estado;
-    if (nuevoEstado !== EstadoObjetivo.CANCELADO) {
-      nuevoEstado =
-        total >= resultado.montoObjetivo
-          ? EstadoObjetivo.COMPLETADO
-          : EstadoObjetivo.PENDIENTE;
+    let nuevoEstado: EstadoObjetivo;
+    if (objetivoData.estado) {
+      nuevoEstado = objetivoData.estado;
+    } else {
+      nuevoEstado = resultado.estado;
+      if (nuevoEstado !== EstadoObjetivo.CANCELADO) {
+        nuevoEstado =
+          total >= resultado.montoObjetivo
+            ? EstadoObjetivo.COMPLETADO
+            : EstadoObjetivo.PENDIENTE;
+      }
     }
 
     const actualizadoConMonto =
@@ -177,6 +211,52 @@ export class ObjetivoService {
   }
 
   async delete(id: string, userId: string) {
+    const objetivo = await this.objetivoRepository.findByIdAndUser(id, userId);
+    if (!objetivo) {
+      throw new NotFoundError(
+        `Objetivo con id ${id} no encontrado para este usuario`
+      );
+    }
+
+    // Recalcular montoActual real desde las operaciones
+    const montoActual = await this.operacionRepository.calcularMontoTotalPorObjetivo(
+      id,
+      userId
+    );
+
+    // Si el objetivo NO está completado y hay plata ahorrada, devolverla
+    if (objetivo.estado !== EstadoObjetivo.COMPLETADO && montoActual > 0) {
+      let billeteraDefault = await (this.billeteraRepository as any).findDefault(
+        userId
+      );
+
+      // fallback a la billetera del propio objetivo
+      if (!billeteraDefault && objetivo.billetera) {
+        billeteraDefault = objetivo.billetera as any;
+      }
+
+      if (billeteraDefault) {
+        billeteraDefault.balance =
+          (billeteraDefault.balance || 0) + montoActual;
+        billeteraDefault.ingresoHistorico =
+          (billeteraDefault.ingresoHistorico || 0) + montoActual;
+
+        await this.billeteraRepository.save(billeteraDefault);
+      }
+    }
+
+    // Borrar operaciones asociadas al objetivo
+    const operaciones = await this.operacionRepository.findByObjetivoId(
+      id,
+      userId
+    );
+    for (const op of operaciones) {
+      const opId = (op as any).id || (op as any)._id?.toString();
+      if (opId) {
+        await this.operacionRepository.deleteById(opId);
+      }
+    }
+
     const deleted = await this.objetivoRepository.deleteByIdAndUser(
       id,
       userId
