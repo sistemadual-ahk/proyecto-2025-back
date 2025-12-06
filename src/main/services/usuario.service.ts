@@ -14,12 +14,7 @@ interface Ubicacion {
 }
 
 export class UsuarioService {
-    constructor(
-        private usuarioRepository: RepositorioDeUsuarios,
-        private provinciaService: ProvinciaService,
-        private operacionService: OperacionService,
-        private categoriaService: CategoriaService
-    ) { }
+    constructor(private usuarioRepository: RepositorioDeUsuarios, private provinciaService: ProvinciaService, private operacionService: OperacionService, private categoriaService: CategoriaService) {}
 
     async findAll() {
         const usuarios = await this.usuarioRepository.findAll();
@@ -164,15 +159,21 @@ export class UsuarioService {
         const usuarioComparar = await this.usuarioRepository.findById(usuarioCompararId);
         if (!usuarioComparar) throw new NotFoundError(`Usuario a comparar con id ${usuarioCompararId} no encontrado`);
 
-        // Calcular fechas del mes (si no se proporcionan, usar el mes actual)
+        // * Calcular fechas del mes (si no se proporcionan, usar el mes ANTERIOR al actual)
         const fechaActual = new Date();
-        const mesActual = mes !== undefined ? mes : fechaActual.getMonth() + 1; // getMonth() devuelve 0-11
+
+        let mesActual = mes !== undefined ? mes : fechaActual.getMonth();
+        // parametro de 1 a 12 = mes humano
+        // getMonth() => 0 a 11, mes humano => +1, por defecto quiero el anterior => -1
+        mesActual = (((mesActual - 1) % 12) + 12) % 12; // prevenir valores fuera de rango, normaliza a 0-11
+
         const añoActual = año !== undefined ? año : fechaActual.getFullYear();
 
         // Primer día del mes
-        const desde = new Date(añoActual, mesActual - 1, 1);
+        const desde = new Date(añoActual, mesActual, 1);
         // Último día del mes
-        const hasta = new Date(añoActual, mesActual, 0, 23, 59, 59, 999);
+        const hasta = new Date(añoActual, mesActual + 1, 0, 23, 59, 59, 999);
+        // console.log("desde: ", desde, " hasta: ", hasta);
 
         // Obtener operaciones de ambos usuarios del mes (solo egresos/gastos)
         const operacionesActual = await this.operacionService.findByFilters({
@@ -220,15 +221,16 @@ export class UsuarioService {
     async compararUsuarioPorCriterios(usuarioActualId: string, criterios: CriteriosComparacionDTO) {
         const usuarioActual = await this.usuarioRepository.findById(usuarioActualId);
         if (!usuarioActual) {
-            throw new NotFoundError(`Usuario actual con id ${usuarioActualId} no encontrado`);
+            throw new NotFoundError(`Usuario actual con id ${usuarioActualId} no  encontrado`);
         }
 
         const candidato = await this.encontrarCandidatoParaComparacion(usuarioActualId, criterios);
         if (!candidato) {
             throw new NotFoundError("No se encontró ningún usuario que coincida con los criterios proporcionados");
         }
+        // console.log("Candidato encontrado para comparación:", candidato);
 
-        const comparacion = await this.compararUsuarios(usuarioActualId, candidato.id);
+        const comparacion = await this.compararUsuarios(usuarioActualId, candidato.id, criterios.mes, criterios.año);
 
         // TODO retornar solo la comparacion entre ambos usuarios
         return { usuarioActual: this.toDTO(usuarioActual), candidato: this.toDTO(candidato), comparacion };
@@ -247,12 +249,16 @@ export class UsuarioService {
         if (criterios.profesion && typeof criterios.profesion === "string") {
             const simil = (await this.usuarioRepository.findSimilarByProfesion(criterios.profesion, usuarioActualId)) ?? []; // si no encuentra, defaultea a array vacio
             candidatos.push(...simil);
+            /*             console.log(`Candidatos encontrados por profesion (${criterios.profesion}): ${simil.length}`);
+             */
         }
 
         // * sueldo
         if (criterios.sueldo && typeof criterios.sueldo === "boolean") {
-            const simil = (await this.usuarioRepository.findSimilarBySueldo(usuarioActual.sueldo || 0, usuarioActualId)) ?? [];
+            const simil = (await this.usuarioRepository.findSimilarBySueldo(usuarioActual.sueldo || 0, usuarioActualId, 5)) ?? [];
             candidatos.push(...simil);
+            // hasta aca llega bien
+            // console.log(`Candidatos encontrados por sueldo: ${simil.length}`);
         }
 
         // * ubicacion
@@ -269,8 +275,10 @@ export class UsuarioService {
             }
         }
 
-        // TODO rankear los usuarios y retornar el mejor candidato
-        const candidatosRankeados = this.rankearCandidatos(usuarioActual, candidatos, criterios) ?? [];
+        const candidatosNormalizados = candidatos.map((c) => this.normalizarId(c));
+        // console.log(candidatosNormalizados[0]);
+        const candidatosRankeados = this.rankearCandidatos(usuarioActual, candidatosNormalizados, criterios) ?? [];
+        // console.log(candidatosRankeados[0]);
 
         if (candidatosRankeados.length == 0) {
             // ? deberia tirar error o devolver array vacio?
@@ -278,7 +286,7 @@ export class UsuarioService {
             return null;
         }
 
-        const LIMITE_TOP_CANDIDATOS = 3;
+        const LIMITE_TOP_CANDIDATOS = 5;
         const topCandidatos = candidatosRankeados.slice(0, LIMITE_TOP_CANDIDATOS);
 
         return topCandidatos[Math.floor(Math.random() * topCandidatos.length)]!;
@@ -421,6 +429,17 @@ export class UsuarioService {
             profesion: usuario.profesion,
             estadoCivil: usuario.estadoCivil,
             ubicacion: usuario.ubicacion || null,
+        };
+    }
+
+    private normalizarId<T extends { id?: string; _id?: any }>(doc: T): T & { id: string } {
+        if (!doc) return doc as any;
+
+        const id = doc.id || doc._id?.toString?.() || String(doc._id);
+
+        return {
+            ...doc,
+            id,
         };
     }
 }

@@ -141,7 +141,7 @@ export class UsuarioController extends BaseController {
 
     compararPorCriterios = asyncHandler(async (req: RequestWithAuth, res: Response) => {
         const usuarioActualId = req.dbUser?.id || (req.dbUser as any)?._id?.toString();
-        console.log("Usuario actual ID:", usuarioActualId);
+        // console.log("Usuario actual ID:", usuarioActualId);
         if (!usuarioActualId) {
             throw new ValidationError("No se pudo determinar el usuario actual desde el token de autenticación");
         }

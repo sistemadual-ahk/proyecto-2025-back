@@ -33,4 +33,6 @@ export interface CriteriosComparacionDTO {
         municipio: string | null;
         localidad: string | null;
     } | null;
+    mes: number;
+    año: number;
 }
