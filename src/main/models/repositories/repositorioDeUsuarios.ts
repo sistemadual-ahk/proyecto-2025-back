@@ -4,9 +4,9 @@ import mongoose from "mongoose";
 import { accentInsensitiveRegex } from "main/utils/regexAccent";
 import { CriteriosComparacionDTO } from "main/dtos/comparacionUsuarioDto";
 interface Ubicacion {
-    provincia: string | null;
-    municipio: string | null;
-    localidad: string | null;
+    provincia: string;
+    municipio: string;
+    localidad: string;
 }
 export class RepositorioDeUsuarios {
     private model: typeof UsuarioModel;
@@ -66,44 +66,49 @@ export class RepositorioDeUsuarios {
     }
 
     async findSimilarByProfesion(profesion: string, id: string, count: number = 1): Promise<Usuario[] | null> {
-        const usuarios = await this.model.find({ profesion, _id: { $ne: new mongoose.Types.ObjectId(id) } }).limit(count);
+        const profesionRegex = profesion ? accentInsensitiveRegex(profesion) : null;
+
+        // add regex para profesion
+        const usuarios = await this.model.find({ _id: { $ne: new mongoose.Types.ObjectId(id) }, profesion: { $regex: profesionRegex } }).limit(count);
+
         return usuarios as unknown as Usuario[] | null;
     }
 
     async findSimilarByUbicacion(ubicacion: Ubicacion, id: string, count: number = 1, exactitud: string = "provincia"): Promise<UsuarioWithMatchBy[] | null> {
         const { provincia, municipio, localidad } = ubicacion;
-        // 🧩 Build accent-insensitive regexes
-        const provinciaRegex = accentInsensitiveRegex(provincia!);
-        const municipioRegex = accentInsensitiveRegex(municipio!);
-        const localidadRegex = accentInsensitiveRegex(localidad!);
 
-        // 🧮 Aggregation pipeline
-        // 🧱 Base pipeline
+        // regex por nivel solo si no son vacios
+        const provinciaRegex = provincia ? accentInsensitiveRegex(provincia) : null;
+        const municipioRegex = municipio ? accentInsensitiveRegex(municipio) : null;
+        const localidadRegex = localidad ? accentInsensitiveRegex(localidad) : null;
+
+        // matcheos por nivel
+        const matchProvincia = provinciaRegex ? { $regexMatch: { input: "$ubicacion.provincia", regex: provinciaRegex } } : true;
+        const matchMunicipio = municipioRegex ? { $regexMatch: { input: "$ubicacion.municipio", regex: municipioRegex } } : true;
+        const matchLocalidad = localidadRegex ? { $regexMatch: { input: "$ubicacion.localidad", regex: localidadRegex } } : true;
+
+        // pipeline
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const pipeline: any[] = [
-            // 1️⃣ Exclude the same user
+            // 1. excluir usuario actual
             { $match: { _id: { $ne: new mongoose.Types.ObjectId(id) } } },
 
-            // 2️⃣ Compute the match level
+            // 2. calcular matcheos por nivel
             {
                 $addFields: {
                     matchBy: {
                         $switch: {
                             branches: [
                                 {
-                                    case: {
-                                        $and: [{ $regexMatch: { input: "$ubicacion.provincia", regex: provinciaRegex } }, { $regexMatch: { input: "$ubicacion.municipio", regex: municipioRegex } }, { $regexMatch: { input: "$ubicacion.localidad", regex: localidadRegex } }],
-                                    },
+                                    case: { $and: [matchProvincia, matchMunicipio, matchLocalidad] },
                                     then: "localidad",
                                 },
                                 {
-                                    case: {
-                                        $and: [{ $regexMatch: { input: "$ubicacion.provincia", regex: provinciaRegex } }, { $regexMatch: { input: "$ubicacion.municipio", regex: municipioRegex } }],
-                                    },
+                                    case: { $and: [matchProvincia, matchMunicipio] },
                                     then: "municipio",
                                 },
                                 {
-                                    case: { $regexMatch: { input: "$ubicacion.provincia", regex: provinciaRegex } },
+                                    case: matchProvincia,
                                     then: "provincia",
                                 },
                             ],
@@ -114,21 +119,18 @@ export class RepositorioDeUsuarios {
             },
         ];
 
-        // 3️⃣ Apply the "exactitud" filter dynamically
+        // 3. determinar exactitud
         if (exactitud) {
             const hierarchy = ["provincia", "municipio", "localidad"];
             const minLevel = hierarchy.indexOf(exactitud);
-
-            // Match only equal or stronger matches
-            const allowedLevels = hierarchy.slice(minLevel);
-
+            const allowedLevels = hierarchy.slice(minLevel); // filtrar por exactitud minima de las 3
             pipeline.push({ $match: { matchBy: { $in: allowedLevels } } });
         } else {
-            // Default: discard completely unrelated users
+            // descartar los que no matchean nada
             pipeline.push({ $match: { matchBy: { $ne: "none" } } });
         }
 
-        // 4️⃣ Sort strongest matches first
+        // 4. aplicar exactitud o nivel de match
         pipeline.push({
             $addFields: {
                 sortValue: {
@@ -144,9 +146,10 @@ export class RepositorioDeUsuarios {
             },
         });
 
-        // 5️⃣ Final sort + limit
+        // 5. sort y limit
         pipeline.push({ $sort: { sortValue: -1 } }, { $limit: count });
 
+        // 6. exportar y return
         const usuarios = await this.model.aggregate(pipeline);
         return usuarios as unknown as UsuarioWithMatchBy[] | null;
     }

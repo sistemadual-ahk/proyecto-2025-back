@@ -192,7 +192,7 @@ export class UsuarioService {
 
         // Obtener todas las categorías default para ambos usuarios
         const categoriasActual = await this.categoriaService.findAllForUser(usuarioActualId);
-        const categoriasComparar = await this.categoriaService.findAllForUser(usuarioCompararId);
+        // const categoriasComparar = await this.categoriaService.findAllForUser(usuarioCompararId);
 
         // Filtrar solo categorías default
         const categoriasDefault = categoriasActual.filter((c) => c.isDefault);
@@ -262,14 +262,14 @@ export class UsuarioService {
         }
 
         // * ubicacion
-        if (criterios.ubicacion) {
-            const { provincia, municipio, localidad } = criterios.ubicacion;
+        if (criterios.ubicacion !== null && criterios.ubicacion !== undefined) {
+            const ubicacionNorm = this.normalizarUbicacion(criterios.ubicacion);
 
             // Al menos un nivel de ubicación activado
-            const algunNivel = provincia || municipio || localidad;
+            const algunNivel = ubicacionNorm!.provincia || ubicacionNorm!.municipio || ubicacionNorm!.localidad;
 
             if (algunNivel) {
-                const simil = (await this.usuarioRepository.findSimilarByUbicacion(criterios.ubicacion, usuarioActualId)) ?? [];
+                const simil = (await this.usuarioRepository.findSimilarByUbicacion(ubicacionNorm!, usuarioActualId)) ?? [];
 
                 candidatos.push(...simil);
             }
@@ -440,6 +440,15 @@ export class UsuarioService {
         return {
             ...doc,
             id,
+        };
+    }
+
+    private normalizarUbicacion(input?: { provincia?: string; municipio?: string; localidad?: string }): Ubicacion | null {
+        if (!input) return null;
+        return {
+            provincia: input.provincia ?? "",
+            municipio: input.municipio ?? "",
+            localidad: input.localidad ?? "",
         };
     }
 }

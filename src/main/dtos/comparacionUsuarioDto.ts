@@ -26,13 +26,13 @@ export interface ComparacionUsuariosResponseDto {
 
 export interface CriteriosComparacionDTO {
     // si es null no se usa el criterio
-    sueldo: boolean | null;
-    profesion: string | null;
-    ubicacion: {
-        provincia: string | null;
-        municipio: string | null;
-        localidad: string | null;
-    } | null;
-    mes: number;
-    año: number;
+    sueldo?: boolean;
+    profesion?: string;
+    ubicacion?: {
+        provincia?: string;
+        municipio?: string;
+        localidad?: string;
+    };
+    mes?: number;
+    año?: number;
 }

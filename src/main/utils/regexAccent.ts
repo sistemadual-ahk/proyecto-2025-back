@@ -4,7 +4,7 @@ export function accentInsensitiveRegex(value: string) {
     let normalized = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     // 2️⃣ Remove punctuation and spaces for flexibility
-    normalized = normalized.replace(/[\s\.\-_,']/g, ""); // removes spaces, dots, dashes, commas, etc.
+    normalized = normalized.replace(/[\s.\-_,']/g, ""); // removes spaces, dots, dashes, commas, etc.
 
     // 3️⃣ Expand vowels to handle accented DB values
     const accentFold = (word: string) => word.replace(/a/gi, "[aáàäâAÁÀÄÂ]").replace(/e/gi, "[eéèëêEÉÈËÊ]").replace(/i/gi, "[iíìïîIÍÌÏÎ]").replace(/o/gi, "[oóòöôOÓÒÖÔ]").replace(/u/gi, "[uúùüûUÚÙÜÛ]");
