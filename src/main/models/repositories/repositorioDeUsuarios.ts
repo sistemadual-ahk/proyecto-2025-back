@@ -1,9 +1,8 @@
 import { UsuarioModel } from "../schemas/usuario.schema";
 import { Usuario, UsuarioComparacion, UsuarioWithMatchBy } from "../entities/usuario";
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 import { accentInsensitiveRegex } from "main/utils/regexAccent";
 import { CriteriosComparacionDTO } from "main/dtos/comparacionUsuarioDto";
-import { UserInfo } from "os";
 interface Ubicacion {
     provincia: string;
     municipio: string;
@@ -161,7 +160,6 @@ export class RepositorioDeUsuarios {
         // el ?? agarra lo de la izquierda si no es null o undefined, sino lo de la derecha. Alguno de los 2 siempre deberia estar definido
         const idUsuarioActual = new mongoose.Types.ObjectId((usuarioActual as Usuario)._id?.toString() ?? usuarioActual.id);
 
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const pipeline: mongoose.PipelineStage[] = [];
 
         // excluir usuario actual
@@ -174,7 +172,6 @@ export class RepositorioDeUsuarios {
         }
         // finalizado el filtro excluyente
         // comenzamos a ordenar/rankear
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const pesosParaRanking = {
             profesion: criterios.profesion ? 100 : 1,
             sueldo: criterios.sueldo == true ? 250 : 1,
@@ -280,7 +277,7 @@ export class RepositorioDeUsuarios {
             ubicacion: r.ubicacion ?? null,
             score: r.score,
         }));
-        console.log("Candidatos encontrados:", candidatos);
+        // console.log("Candidatos encontrados:", candiadatos);
         // console.log(candidatos[0]);
         return candidatos;
     }

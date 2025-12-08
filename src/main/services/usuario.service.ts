@@ -6,6 +6,7 @@ import { ubicacionToDebugString } from "main/utils/debugUtils";
 import { OperacionService } from "./operacion.service";
 import { CategoriaService } from "./categoria.service";
 import { ComparacionUsuarioDto, ComparacionUsuariosResponseDto, CategoriaComparacionDto, CriteriosComparacionDTO } from "../dtos/comparacionUsuarioDto";
+import { Categoria } from "@models/entities/categoria";
 
 interface Ubicacion {
     provincia: string;
@@ -201,7 +202,7 @@ export class UsuarioService {
         const datosActual = this.procesarDatosUsuario(
             usuarioActual,
             operacionesActual,
-            categoriasDefault,
+            categoriasDefault as Categoria[],
             true // incluir nombre
         );
 
@@ -209,7 +210,7 @@ export class UsuarioService {
         const datosComparar = this.procesarDatosUsuario(
             usuarioComparar,
             operacionesComparar,
-            categoriasDefault,
+            categoriasDefault as Categoria[],
             false // no incluir nombre
         );
 
@@ -255,13 +256,13 @@ export class UsuarioService {
         return elegidoCompleto ?? null;
     }
 
-    private procesarDatosUsuario(usuario: Usuario, operaciones: any[], categoriasDefault: any[], incluirNombre: boolean): ComparacionUsuarioDto {
+    private procesarDatosUsuario(usuario: Usuario, operaciones: any[], categoriasDefault: Categoria[], incluirNombre: boolean): ComparacionUsuarioDto {
         // Agrupar operaciones por categoría y calcular montos totales
         const categoriasMap = new Map<string, { nombre: string; montoTotal: number }>();
 
         // Inicializar todas las categorías default con monto 0
         categoriasDefault.forEach((cat) => {
-            const catId = cat.id || (cat as any)._id?.toString() || String((cat as any)._id);
+            const catId = cat.id || (cat as Categoria)._id?.toString() || String((cat as Categoria)._id);
             if (catId) {
                 categoriasMap.set(catId, {
                     nombre: cat.nombre,
@@ -278,7 +279,7 @@ export class UsuarioService {
             const categoria = op.categoria;
             if (!categoria) return;
 
-            const catId = categoria.id || (categoria as any)._id?.toString() || String((categoria as any)._id);
+            const catId = categoria.id || (categoria as Categoria)._id?.toString() || String((categoria as any)._id);
             if (catId && categoriasMap.has(catId)) {
                 const categoriaData = categoriasMap.get(catId)!;
                 categoriaData.montoTotal += op.monto || 0;

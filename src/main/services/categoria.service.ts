@@ -124,9 +124,9 @@ export class CategoriaService {
   }
 
   private toDTO(categoria: Categoria) {
-    const user = (categoria as any).user;
+    const user = (categoria as Categoria).user;
     return {
-      id: categoria.id || (categoria as any)._id,
+      id: categoria.id || (categoria as Categoria)._id,
       nombre: categoria.nombre,
       descripcion: categoria.descripcion,
       icono: categoria.icono,

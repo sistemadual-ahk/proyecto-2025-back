@@ -4,6 +4,7 @@ import { asyncHandler, ValidationError } from "../middlewares/error.middleware";
 import { BaseController } from "./base.controller";
 import { RequestWithAuth } from "@middlewares/sync-user.middleware";
 import { CriteriosComparacionDTO } from "main/dtos/comparacionUsuarioDto";
+import { Usuario } from "@models/entities/usuario";
 
 export class UsuarioController extends BaseController {
     constructor(private usuarioService: UsuarioService) {
@@ -100,7 +101,7 @@ export class UsuarioController extends BaseController {
     });
 
     compararUsuarios = asyncHandler(async (req: RequestWithAuth, res: Response) => {
-        const usuarioActualId = req.dbUser?.id || (req.dbUser as any)?._id?.toString();
+        const usuarioActualId = req.dbUser?.id || (req.dbUser as Usuario)?._id?.toString();
         if (!usuarioActualId) {
             throw new ValidationError("No se pudo determinar el usuario actual desde el token de autenticación");
         }
@@ -140,7 +141,7 @@ export class UsuarioController extends BaseController {
     });
 
     compararPorCriterios = asyncHandler(async (req: RequestWithAuth, res: Response) => {
-        const usuarioActualId = req.dbUser?.id || (req.dbUser as any)?._id?.toString();
+        const usuarioActualId = req.dbUser?.id || (req.dbUser as Usuario)?._id?.toString();
         // console.log("Usuario actual ID:", usuarioActualId);
         if (!usuarioActualId) {
             throw new ValidationError("No se pudo determinar el usuario actual desde el token de autenticación");
