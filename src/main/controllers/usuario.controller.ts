@@ -114,8 +114,8 @@ export class UsuarioController extends BaseController {
 
         // Obtener mes y año de query params (opcional, por defecto mes actual)
         // Soporta tanto "año" como "anio" para evitar problemas con caracteres especiales en URLs
-        const mesParam = req.query['mes'] || req.query['month'];
-        const añoParam = req.query['año'] || req.query['anio'] || req.query['year'];
+        const mesParam = req.query["mes"] || req.query["month"];
+        const añoParam = req.query["año"] || req.query["anio"] || req.query["year"];
 
         const mes = mesParam ? Number(mesParam) : undefined;
         const año = añoParam ? Number(añoParam) : undefined;
@@ -155,7 +155,7 @@ export class UsuarioController extends BaseController {
         if (criterios.ubicacion !== null && criterios.ubicacion !== undefined) {
             const { provincia, municipio, localidad } = criterios.ubicacion;
 
-            const estructuraValida = (typeof provincia === "string" || provincia === null) && (typeof municipio === "string" || municipio === null) && (typeof localidad === "string" || localidad === null);
+            const estructuraValida = (typeof provincia === "string" || provincia === null || provincia === undefined) && (typeof municipio === "string" || municipio === null || municipio || undefined) && (typeof localidad === "string" || localidad === null || localidad === undefined);
 
             if (!estructuraValida) {
                 throw new ValidationError("Estructura de ubicación inválida en criterios de comparación");

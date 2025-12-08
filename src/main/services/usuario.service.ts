@@ -225,11 +225,9 @@ export class UsuarioService {
         }
 
         const candidato = await this.encontrarCandidatoParaComparacion(usuarioActualId, criterios);
-        if (!candidato) {
+        if (!candidato || candidato == null) {
             throw new NotFoundError("No se encontró ningún usuario que coincida con los criterios proporcionados");
         }
-        // console.log("Candidato encontrado para comparación:", candidato);
-
         const comparacion = await this.compararUsuarios(usuarioActualId, candidato.id, criterios.mes, criterios.año);
 
         // TODO retornar solo la comparacion entre ambos usuarios
@@ -242,113 +240,19 @@ export class UsuarioService {
             throw new NotFoundError(`Usuario actual con id ${usuarioActualId} no encontrado`);
         }
 
-        // ? Lista de candidatos
-        const candidatos: Usuario[] | null = [];
+        // Lista de candidatos
+        const TOP_N_CANDIDATOS = 3;
+        const candidatos = await this.usuarioRepository.findCandidatesForComparisonOptimized(usuarioActual, criterios, TOP_N_CANDIDATOS);
 
-        // * profesion
-        if (criterios.profesion && typeof criterios.profesion === "string") {
-            const simil = (await this.usuarioRepository.findSimilarByProfesion(criterios.profesion, usuarioActualId)) ?? []; // si no encuentra, defaultea a array vacio
-            candidatos.push(...simil);
-            /*             console.log(`Candidatos encontrados por profesion (${criterios.profesion}): ${simil.length}`);
-             */
-        }
-
-        // * sueldo
-        if (criterios.sueldo && typeof criterios.sueldo === "boolean") {
-            const simil = (await this.usuarioRepository.findSimilarBySueldo(usuarioActual.sueldo || 0, usuarioActualId, 5)) ?? [];
-            candidatos.push(...simil);
-            // hasta aca llega bien
-            // console.log(`Candidatos encontrados por sueldo: ${simil.length}`);
-        }
-
-        // * ubicacion
-        if (criterios.ubicacion !== null && criterios.ubicacion !== undefined) {
-            const ubicacionNorm = this.normalizarUbicacion(criterios.ubicacion);
-
-            // Al menos un nivel de ubicación activado
-            const algunNivel = ubicacionNorm!.provincia || ubicacionNorm!.municipio || ubicacionNorm!.localidad;
-
-            if (algunNivel) {
-                const simil = (await this.usuarioRepository.findSimilarByUbicacion(ubicacionNorm!, usuarioActualId)) ?? [];
-
-                candidatos.push(...simil);
-            }
-        }
-
-        const candidatosNormalizados = candidatos.map((c) => this.normalizarId(c));
-        // console.log(candidatosNormalizados[0]);
-        const candidatosRankeados = this.rankearCandidatos(usuarioActual, candidatosNormalizados, criterios) ?? [];
-        // console.log(candidatosRankeados[0]);
-
-        if (candidatosRankeados.length == 0) {
-            // ? deberia tirar error o devolver array vacio?
-            // throw new NotFoundError("No candidates matched the criteria.");
+        // si buscamos por alguna profesion que es unicamente de 1 solo usuario, puede que no haya candidatos
+        if (!candidatos || candidatos.length === 0) {
             return null;
         }
 
-        const LIMITE_TOP_CANDIDATOS = 5;
-        const topCandidatos = candidatosRankeados.slice(0, LIMITE_TOP_CANDIDATOS);
+        const elegido = this.pickRandomGeometric(candidatos, 0.6);
+        const elegidoCompleto = await this.usuarioRepository.findById(elegido!.id);
 
-        return topCandidatos[Math.floor(Math.random() * topCandidatos.length)]!;
-    }
-
-    private rankearCandidatos(usuarioActual: Usuario, candidatos: Usuario[], criterios: CriteriosComparacionDTO): Usuario[] | null {
-        // ? criterios weighted
-        const pesos = {
-            profesion: 100,
-            sueldo: 60,
-            localidad: 30,
-            municipio: 20,
-            provincia: 10,
-        };
-
-        const map = new Map<string, { usuario: Usuario; score: number }>();
-
-        for (const c of candidatos) {
-            if (!map.has(c.id)) {
-                map.set(c.id, { usuario: c, score: 0 });
-            }
-
-            const entry = map.get(c.id)!;
-
-            if (criterios.profesion && c.profesion == criterios.profesion) {
-                entry.score += pesos.profesion;
-            }
-
-            if (criterios.sueldo == true && usuarioActual.sueldo != null && c.sueldo != null) {
-                entry.score += pesos.sueldo;
-            }
-
-            if (criterios.ubicacion) {
-                const base = criterios.ubicacion;
-
-                // Coincidencia provincia
-                if (base.provincia && c.ubicacion?.provincia === base.provincia) {
-                    entry.score += pesos.provincia;
-                }
-
-                // Coincidencia municipio
-                if (base.municipio && c.ubicacion?.municipio === base.municipio) {
-                    entry.score += pesos.municipio;
-                }
-
-                // Coincidencia localidad
-                if (base.localidad && c.ubicacion?.localidad === base.localidad) {
-                    entry.score += pesos.localidad;
-                }
-            }
-        }
-
-        // ordenar el scoring
-
-        const ordenados = Array.from(map.values())
-            .sort((a, b) => b.score - a.score)
-            .map((entry) => entry.usuario); // devuelve solo la parte de usuario
-
-        if (ordenados.length == 0) {
-            return [];
-        }
-        return ordenados;
+        return elegidoCompleto ?? null;
     }
 
     private procesarDatosUsuario(usuario: Usuario, operaciones: any[], categoriasDefault: any[], incluirNombre: boolean): ComparacionUsuarioDto {
@@ -432,7 +336,7 @@ export class UsuarioService {
         };
     }
 
-    private normalizarId<T extends { id?: string; _id?: any }>(doc: T): T & { id: string } {
+    private normalizarId<T extends { id?: string; _id?: string }>(doc: T): T & { id: string } {
         if (!doc) return doc as any;
 
         const id = doc.id || doc._id?.toString?.() || String(doc._id);
@@ -450,5 +354,23 @@ export class UsuarioService {
             municipio: input.municipio ?? "",
             localidad: input.localidad ?? "",
         };
+    }
+    private pickRandomGeometric<T>(items: T[], factor: number): T | null {
+        if (items.length === 0) return null;
+
+        const pesos = items.map((item, index) => Math.pow(factor, index));
+        const total = pesos.reduce((a, b) => a + b, 0);
+
+        const r = Math.random() * total;
+        let acumulado = 0;
+
+        for (let i = 0; i < items.length; i++) {
+            acumulado += pesos[i]!;
+            if (r <= acumulado) {
+                return items[i]! as T | null;
+            }
+        }
+
+        return items[items.length - 1]!;
     }
 }

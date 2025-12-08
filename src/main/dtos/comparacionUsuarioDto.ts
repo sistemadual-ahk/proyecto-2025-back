@@ -25,7 +25,7 @@ export interface ComparacionUsuariosResponseDto {
 }
 
 export interface CriteriosComparacionDTO {
-    // si es null no se usa el criterio
+    // si es null/undefined no se usa el criterio
     sueldo?: boolean;
     profesion?: string;
     ubicacion?: {

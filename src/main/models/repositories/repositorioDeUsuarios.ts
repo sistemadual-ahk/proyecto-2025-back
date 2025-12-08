@@ -1,8 +1,9 @@
 import { UsuarioModel } from "../schemas/usuario.schema";
-import { Usuario, UsuarioWithMatchBy } from "../entities/usuario";
-import mongoose from "mongoose";
+import { Usuario, UsuarioComparacion, UsuarioWithMatchBy } from "../entities/usuario";
+import mongoose, { mongo } from "mongoose";
 import { accentInsensitiveRegex } from "main/utils/regexAccent";
 import { CriteriosComparacionDTO } from "main/dtos/comparacionUsuarioDto";
+import { UserInfo } from "os";
 interface Ubicacion {
     provincia: string;
     municipio: string;
@@ -35,7 +36,7 @@ export class RepositorioDeUsuarios {
         return usuario as unknown as Usuario | null;
     }
 
-    async findSimilarBySueldo(sueldo: number, id: string, count: number = 1): Promise<Usuario[] | null> {
+    async findSimilarBySueldo(sueldo: number, id: string, count: number = 5): Promise<Usuario[] | null> {
         const usuarios = await this.model.aggregate([
             { $match: { _id: { $ne: new mongoose.Types.ObjectId(id) }, sueldo: { $ne: null } } }, // exclude the user with the given id
             {
@@ -65,7 +66,7 @@ export class RepositorioDeUsuarios {
         return usuarios as unknown as Usuario[] | null;
     }
 
-    async findSimilarByProfesion(profesion: string, id: string, count: number = 1): Promise<Usuario[] | null> {
+    async findSimilarByProfesion(profesion: string, id: string, count: number = 5): Promise<Usuario[] | null> {
         const profesionRegex = profesion ? accentInsensitiveRegex(profesion) : null;
 
         // add regex para profesion
@@ -74,7 +75,7 @@ export class RepositorioDeUsuarios {
         return usuarios as unknown as Usuario[] | null;
     }
 
-    async findSimilarByUbicacion(ubicacion: Ubicacion, id: string, count: number = 1, exactitud: string = "provincia"): Promise<UsuarioWithMatchBy[] | null> {
+    async findSimilarByUbicacion(ubicacion: Ubicacion, id: string, count: number = 5, exactitud: string = "provincia"): Promise<UsuarioWithMatchBy[] | null> {
         const { provincia, municipio, localidad } = ubicacion;
 
         // regex por nivel solo si no son vacios
@@ -154,9 +155,134 @@ export class RepositorioDeUsuarios {
         return usuarios as unknown as UsuarioWithMatchBy[] | null;
     }
 
-    async findCandidateUsuarioForComparison(_id: string, _criterios: CriteriosComparacionDTO): Promise<Usuario[]> {
-        const usuarios = await this.model.find();
-        return usuarios as unknown as Usuario[];
+    // paso el user actual ya que voy a acceder a sus datos (sueldo, id)
+    async findCandidatesForComparisonOptimized(usuarioActual: Usuario, criterios: CriteriosComparacionDTO, count: number = 5): Promise<UsuarioComparacion[]> {
+        // get id actual
+        // el ?? agarra lo de la izquierda si no es null o undefined, sino lo de la derecha. Alguno de los 2 siempre deberia estar definido
+        const idUsuarioActual = new mongoose.Types.ObjectId((usuarioActual as Usuario)._id?.toString() ?? usuarioActual.id);
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const pipeline: mongoose.PipelineStage[] = [];
+
+        // excluir usuario actual
+        pipeline.push({ $match: { _id: { $ne: idUsuarioActual } } });
+
+        // filtro excluyente de profesion
+        const profesionRegex = criterios.profesion && criterios.profesion.trim() !== "" ? accentInsensitiveRegex(criterios.profesion) : null;
+        if (profesionRegex) {
+            pipeline.push({ $match: { profesion: { $regex: profesionRegex } } });
+        }
+        // finalizado el filtro excluyente
+        // comenzamos a ordenar/rankear
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const pesosParaRanking = {
+            profesion: criterios.profesion ? 100 : 1,
+            sueldo: criterios.sueldo == true ? 250 : 1,
+            provincia: criterios.ubicacion?.provincia ? 5 : 1,
+            municipio: criterios.ubicacion?.municipio ? 15 : 1,
+            localidad: criterios.ubicacion?.localidad ? 30 : 1,
+        };
+        const scoreProfesión = profesionRegex
+            ? {
+                  $cond: [{ $regexMatch: { input: "$profesion", regex: profesionRegex } }, pesosParaRanking.profesion, 0],
+              }
+            : 0;
+        // score por sueldo
+        // score por sueldo (curva exponencial)
+        const scoreSueldo = criterios.sueldo
+            ? {
+                  $let: {
+                      vars: {
+                          diff: { $abs: { $subtract: ["$sueldo", usuarioActual.sueldo] } },
+                          peso: pesosParaRanking.sueldo,
+                          escala: 20000, // ajustable
+                      },
+                      in: {
+                          // peso * exp( - diff / escala )
+                          $multiply: [
+                              "$$peso",
+                              {
+                                  $exp: {
+                                      $multiply: [-1, { $divide: ["$$diff", "$$escala"] }],
+                                  },
+                              },
+                          ],
+                      },
+                  },
+              }
+            : 1;
+
+        // score por ubicacion
+        const { provincia = null, municipio = null, localidad = null } = criterios.ubicacion ?? {};
+
+        // Ubicación normalizada
+        const loc = {
+            provincia: provincia !== undefined && typeof provincia == "string" ? provincia : null,
+            municipio: municipio !== undefined && typeof municipio == "string" ? municipio : null,
+            localidad: localidad !== undefined && typeof localidad == "string" ? localidad : null,
+        };
+
+        const scoreUbicacion = [
+            // localidad
+            pesosParaRanking.localidad && loc.localidad
+                ? {
+                      $cond: [{ $eq: ["$ubicacion.localidad", loc.localidad] }, pesosParaRanking.localidad, 0],
+                  }
+                : 0,
+
+            // municipio
+            pesosParaRanking.municipio && loc.municipio
+                ? {
+                      $cond: [{ $eq: ["$ubicacion.municipio", loc.municipio] }, pesosParaRanking.municipio, 0],
+                  }
+                : 0,
+
+            // provincia
+            pesosParaRanking.provincia && loc.provincia
+                ? {
+                      $cond: [{ $eq: ["$ubicacion.provincia", loc.provincia] }, pesosParaRanking.provincia, 0],
+                  }
+                : 0,
+        ];
+
+        // aplico filtros en un campo score
+        pipeline.push({
+            $addFields: {
+                score: {
+                    $add: [scoreProfesión, scoreSueldo, ...scoreUbicacion],
+                },
+            },
+        });
+
+        // ordeno por score descendente
+        pipeline.push({ $sort: { score: -1 } });
+
+        // limitar cantidad de resultados
+        pipeline.push({ $limit: count });
+
+        // proyeccion del resultado
+        pipeline.push({
+            $project: {
+                _id: 1,
+                sueldo: 1,
+                profesion: 1,
+                ubicacion: 1,
+                score: 1,
+            },
+        });
+
+        const resultados = await this.model.aggregate(pipeline);
+
+        const candidatos: UsuarioComparacion[] = resultados.map((r) => ({
+            id: r._id.toString(),
+            sueldo: r.sueldo ?? null,
+            profesion: r.profesion ?? null,
+            ubicacion: r.ubicacion ?? null,
+            score: r.score,
+        }));
+        console.log("Candidatos encontrados:", candidatos);
+        // console.log(candidatos[0]);
+        return candidatos;
     }
 
     async findByEmail(mail: string): Promise<Usuario | null> {
