@@ -210,7 +210,7 @@ export class TelegramController extends BaseController {
                 const billeteras: billeteraDto[] = await this.billeteraService.findAllForUser(usuarioId);
                 const botonesBilleteras = billeteras.map((billetera: billeteraDto) => {
                     return [{
-                        text: `${billetera.nombre} ${billetera.balance}`,
+                        text: `💳${billetera.nombre}  | 💲${billetera.balance}`,
                         callback_data: `select_wall:${billetera.nombre}`,
                     }];
                 });
@@ -266,16 +266,19 @@ export class TelegramController extends BaseController {
 
             if (!userSessions[chatId]) {
                 userSessions[chatId] = { modoEdicion: false };
-                if (nuevoValor.startsWith('/')) { 
-                    return;
+            }
+
+            if (nuevoValor.startsWith('/')) {
+
+                if (nuevoValor.startsWith('/start')) {
+                    await bot.sendMessage(
+                        chatId,
+                        "👋 ¡Bienvenido/a al asistente financiero!\n\n" +
+                        "Podés enviarme un mensaje describiendo un gasto, por ejemplo:\n" +
+                        "👉 *\"Gaste 2500 en supermercado ayer\"*",
+                        { parse_mode: 'Markdown' }
+                    );
                 }
-                await bot.sendMessage(
-                    chatId,
-                    "👋 ¡Bienvenido/a al asistente financiero!\n\n" +
-                    "Podés enviarme un mensaje describiendo un gasto, por ejemplo:\n" +
-                    "👉 *\"Gaste 2500 en supermercado ayer\"*",
-                    { parse_mode: 'Markdown' }
-                );
                 return;
             }
             
@@ -356,14 +359,14 @@ if (!session.user) {
                     tipo = 'audio';
                     const fileId = msg.voice.file_id;
                     const fileLink = await bot.getFileLink(fileId);
-                    const localPath = './src/main/messages/audio.ogg';
+                    const localPath = './src/main/utils/messages/audio.ogg';
                     await downloadFile(fileLink, localPath);
                     contenido = localPath;
                 } else if (msg.photo?.length) {
                     tipo = 'imagen';
                     const fileId = msg.photo[msg.photo.length - 1]!.file_id;
                     const fileLink = await bot.getFileLink(fileId);
-                    const localPath = './src/main/messages/photo.jpg';
+                    const localPath = './src/main/utils/messages/photo.jpg';
                     await downloadFile(fileLink, localPath);
                     contenido = localPath;
                 } else {
@@ -447,10 +450,6 @@ if (!session.user) {
         // silenciar error
     }
 }
-
-
-
-
             const originalMessageId = sessionData.originalMessageId;
 
             if (data === 'confirmar') {
@@ -483,12 +482,13 @@ if (!session.user) {
                 delete userSessions[chatId];
             }
             else if (data === 'cancelar_op') {
+                // 1. Editar el mensaje original para confirmar la cancelación y eliminar los botones.
                 await bot.editMessageText('❌ Operación cancelada y datos descartados.', {
                     chat_id: chatId,
                     message_id: messageId,
                     reply_markup: { inline_keyboard: [] },
                 }).catch(console.error);
-                await bot.sendMessage(chatId, '❌ Operación cancelada y datos descartados.');
+
                 delete userSessions[chatId];
             }
             else if (data === 'editar') {
@@ -513,9 +513,17 @@ if (!session.user) {
             }
             else if (data === 'cancelar_edicion') {
                 await bot.deleteMessage(chatId, messageId).catch(console.error);
-                const campo = sessionData.campo;
-                await bot.sendMessage(chatId, `❌ Cambio de *${campo ?? 'campo'}* cancelado.`, { parse_mode: 'Markdown' });
-                mostrarMenuEdicion(bot, chatId, sessionData);
+
+                sessionData.modoEdicion = false;
+                sessionData.estado = undefined;
+                sessionData.campo = undefined;
+
+                const mensajeActualizado = this.getDatosMensaje(sessionData, '📋 Edición cancelada. ¿Confirmar datos originales?', true);
+ 
+                const sentMessage = await bot.sendMessage(chatId, mensajeActualizado.text, {
+                reply_markup: mensajeActualizado.reply_markup,
+                });
+                 sessionData.originalMessageId = sentMessage.message_id;
             }
             else if (data.startsWith('editar_')) {
                 const campo = data.replace('editar_', '') as 'monto' | 'fecha' | 'categoria' | 'descripcion' | 'billetera';
