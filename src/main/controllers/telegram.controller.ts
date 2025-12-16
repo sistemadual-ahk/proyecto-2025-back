@@ -356,14 +356,14 @@ if (!session.user) {
                     tipo = 'audio';
                     const fileId = msg.voice.file_id;
                     const fileLink = await bot.getFileLink(fileId);
-                    const localPath = './src/main/messages/audio.ogg';
+                    const localPath = './src/main/utils/messages/audio.ogg';
                     await downloadFile(fileLink, localPath);
                     contenido = localPath;
                 } else if (msg.photo?.length) {
                     tipo = 'imagen';
                     const fileId = msg.photo[msg.photo.length - 1]!.file_id;
                     const fileLink = await bot.getFileLink(fileId);
-                    const localPath = './src/main/messages/photo.jpg';
+                    const localPath = './src/main/utils/messages/photo.jpg';
                     await downloadFile(fileLink, localPath);
                     contenido = localPath;
                 } else {
