@@ -8,9 +8,7 @@ import { Operacion } from '@models/entities/operacion';
 import { CategoriaService } from '@services/categoria.service';
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 
-
 dotenv.config();
-
 
 interface ProcesarEntradaResponse {
   monto: number;
@@ -18,7 +16,6 @@ interface ProcesarEntradaResponse {
   categoria: string;
   descripcion: string;
 }
-
 
 export class OpenAIService {
   private client: OpenAI;
@@ -84,16 +81,31 @@ Responde ÚNICAMENTE con un JSON válido: {"monto": NUMERO, "fecha": "DD-MM-YYYY
           model: 'gpt-4o',
           messages: [{ role: 'user', content: `${promptBase}\n\nInformación: ${datos}` }],
         });
-      } else if (tipoEntrada === 'imagen') {
+      } 
+      // --- BLOQUE CORREGIDO ---
+      else if (tipoEntrada === 'imagen') {
         const imagenBase64 = fs.readFileSync(path.resolve(datos), 'base64');
         resultadoAPI = await this.client.chat.completions.create({
           model: 'gpt-4o',
           messages: [
-            { role: 'user', content: promptBase },
-            { role: 'user', content: `data:image/jpeg;base64,${imagenBase64}` },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: promptBase },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:image/jpeg;base64,${imagenBase64}`,
+                    detail: 'low'
+                  }
+                }
+              ],
+            },
           ],
         });
-      } else if (tipoEntrada === 'audio') {
+      } 
+      // -------------------------
+      else if (tipoEntrada === 'audio') {
         const mp3_path = await this.parsearAudios(path.resolve(datos));
         const transcripcion = await this.client.audio.transcriptions.create({
           model: 'whisper-1',
@@ -123,7 +135,7 @@ Responde ÚNICAMENTE con un JSON válido: {"monto": NUMERO, "fecha": "DD-MM-YYYY
 
   public async guardarDatos(operacion: Partial<Operacion>): Promise<void> {
     try {
-      this.operacionRepo.save(operacion);
+      await this.operacionRepo.save(operacion);
       console.log('✅ Datos guardados en MongoDB');
     } catch (error) {
       console.error('❌ Error al guardar datos:', error);
@@ -133,7 +145,6 @@ Responde ÚNICAMENTE con un JSON válido: {"monto": NUMERO, "fecha": "DD-MM-YYYY
   public async borrarDatos(operacionId: string): Promise<void> { 
     try {
       const fueEliminado = await this.operacionRepo.deleteById(operacionId); 
-
       if (fueEliminado) {
         console.log(`🗑️ Datos eliminados con ID: ${operacionId}`);
       } else {
