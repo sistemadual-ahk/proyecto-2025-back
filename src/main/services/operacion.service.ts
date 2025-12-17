@@ -116,122 +116,104 @@ export class OperacionService {
   // ----------------------------------------------------------------------
 
   async create(operacionData: OperacionInputData) {
-    const {
-      descripcion,
-      monto,
-      tipo,
-      fecha,
-      billeteraId,
-      categoriaId,
-      user,
-      objetivo,
-    } = operacionData;
+  const {
+    descripcion,
+    monto,
+    tipo,
+    fecha,
+    billeteraId,
+    categoriaId,
+    user,
+    objetivo,
+  } = operacionData;
 
-    // billeteraId deja de ser siempre obligatorio
-    if (!monto || !tipo || !user || !categoriaId) {
-      throw new ValidationError(
-        "Monto, tipo, usuario y categoriaId son requeridos"
-      );
-    }
-
-    // Si NO hay objetivo ⇒ billeteraId es obligatorio
-    if (!billeteraId && !objetivo) {
-      throw new ValidationError(
-        "billeteraId es requerido si la operación no está asociada a un objetivo"
-      );
-    }
-
-    if (monto === 0) {
-      throw new ValidationError("El monto de la operacion no debe ser 0");
-    }
-
-    let tipoFinal: string;
-    if (tipo.toLowerCase() === "income" || tipo.toLowerCase() === "ingreso") {
-      tipoFinal = "Ingreso";
-    } else if (
-      tipo.toLowerCase() === "expense" ||
-      tipo.toLowerCase() === "egreso"
-    ) {
-      tipoFinal = "Egreso";
-    } else {
-      throw new ValidationError(`El tipo de operacion '${tipo}' no es válido.`);
-    }
-
-    const categoriaRecuperada = await this.categoriaRepository.findById(
-      categoriaId as string
-    );
-    if (!categoriaRecuperada)
-      throw new NotFoundError(
-        `Categoria con ID ${categoriaId} no encontrada`
-      );
-
-    const usuarioRecuperado = await this.userRepository.findById(user);
-    if (!usuarioRecuperado)
-      throw new NotFoundError(`Usuario con ID ${user} no encontrado`);
-
-    // Validar objetivo (si viene) y que sea del usuario
-    if (objetivo) {
-      const objetivoRecuperado = await this.objetivoRepository.findByIdAndUser(
-        objetivo,
-        user
-      );
-      if (!objetivoRecuperado) {
-        throw new ValidationError(
-          "El objetivo no existe o no pertenece al usuario"
-        );
-      }
-    }
-
-    // Resolver billetera:
-    // - Si hay objetivo ⇒ SIEMPRE billetera default del usuario
-    // - Si no hay objetivo ⇒ usamos billeteraId recibido
-    let billeteraRecuperada: any;
-
-    billeteraRecuperada = await this.billeteraRepository.findById(
-        billeteraId as string
-      );
-      if (!billeteraRecuperada)
-        throw new NotFoundError(
-          `Billetera con ID ${billeteraId} no encontrada`
-        );
-
-    const nuevaOperacion = new Operacion();
-    nuevaOperacion.monto = monto;
-    nuevaOperacion.descripcion = descripcion;
-    nuevaOperacion.fecha = fecha || new Date();
-    nuevaOperacion.tipo = tipoFinal as any;
-
-    nuevaOperacion.billetera = billeteraRecuperada;
-    nuevaOperacion.categoria = categoriaRecuperada;
-    nuevaOperacion.user = usuarioRecuperado;
-    nuevaOperacion.objetivo = objetivo || undefined;
-
-    const operacionGuardada = await this.operacionRepository.save(
-      nuevaOperacion
-    );
-
-    const billeteraAActualizar = billeteraRecuperada;
-
-    // Egreso ⇒ sale dinero de la billetera
-    // Ingreso ⇒ entra dinero a la billetera
-    if (tipoFinal === "Ingreso") {
-      billeteraAActualizar.ingresoHistorico += monto;
-    } else if (tipoFinal === "Egreso") {
-      billeteraAActualizar.gastoHistorico += monto;
-    }
-    billeteraAActualizar.balance =
-      billeteraAActualizar.balance +
-      (tipoFinal === "Ingreso" ? monto : -monto);
-
-    await this.billeteraRepository.save(billeteraAActualizar);
-
-    // Recalcular objetivo si corresponde
-    if (objetivo) {
-      await this.recalcularObjetivo(objetivo, user);
-    }
-
-    return this.toDTO(operacionGuardada);
+  // Requeridos base
+  if (monto === undefined || monto === null || !tipo || !user || !categoriaId) {
+    throw new ValidationError("Monto, tipo, usuario y categoriaId son requeridos");
   }
+
+  if (Number(monto) === 0) {
+    throw new ValidationError("El monto de la operacion no debe ser 0");
+  }
+
+  // ✅ AHORA SIEMPRE billeteraId (también con objetivo)
+  if (!billeteraId) {
+    throw new ValidationError("billeteraId es requerido");
+  }
+
+  // Normalizar tipo
+  let tipoFinal: string;
+  if (tipo.toLowerCase() === "income" || tipo.toLowerCase() === "ingreso") {
+    tipoFinal = "Ingreso";
+  } else if (tipo.toLowerCase() === "expense" || tipo.toLowerCase() === "egreso") {
+    tipoFinal = "Egreso";
+  } else {
+    throw new ValidationError(`El tipo de operacion '${tipo}' no es válido.`);
+  }
+
+  const categoriaRecuperada = await this.categoriaRepository.findById(categoriaId as string);
+  if (!categoriaRecuperada) {
+    throw new NotFoundError(`Categoria con ID ${categoriaId} no encontrada`);
+  }
+
+  const usuarioRecuperado = await this.userRepository.findById(user);
+  if (!usuarioRecuperado) {
+    throw new NotFoundError(`Usuario con ID ${user} no encontrado`);
+  }
+
+  // Validar objetivo (si viene) y que sea del usuario
+  if (objetivo) {
+    const objetivoRecuperado = await this.objetivoRepository.findByIdAndUser(objetivo, user);
+    if (!objetivoRecuperado) {
+      throw new ValidationError("El objetivo no existe o no pertenece al usuario");
+    }
+  }
+
+  // ✅ Resolver billetera: usamos la que manda el front
+  const billeteraRecuperada = await this.billeteraRepository.findById(billeteraId as string);
+  if (!billeteraRecuperada) {
+    throw new NotFoundError(`Billetera con ID ${billeteraId} no encontrada`);
+  }
+
+  // ✅ Seguridad: que la billetera sea del usuario
+  const billeteraUserId = (billeteraRecuperada.user as any)?._id?.toString?.();
+  if (!billeteraUserId || billeteraUserId !== user.toString()) {
+    throw new ValidationError("La billetera no pertenece al usuario");
+  }
+
+  const nuevaOperacion = new Operacion();
+  nuevaOperacion.monto = Number(monto);
+  nuevaOperacion.descripcion = descripcion;
+  nuevaOperacion.fecha = fecha || new Date();
+  nuevaOperacion.tipo = tipoFinal as any;
+  nuevaOperacion.billetera = billeteraRecuperada;
+  nuevaOperacion.categoria = categoriaRecuperada;
+  nuevaOperacion.user = usuarioRecuperado;
+  nuevaOperacion.objetivo = objetivo || undefined;
+
+  const operacionGuardada = await this.operacionRepository.save(nuevaOperacion);
+
+  // Actualizar billetera
+  const billeteraAActualizar = billeteraRecuperada;
+
+  if (tipoFinal === "Ingreso") {
+    billeteraAActualizar.ingresoHistorico += Number(monto);
+  } else {
+    billeteraAActualizar.gastoHistorico += Number(monto);
+  }
+
+  billeteraAActualizar.balance =
+    billeteraAActualizar.balance + (tipoFinal === "Ingreso" ? Number(monto) : -Number(monto));
+
+  await this.billeteraRepository.save(billeteraAActualizar);
+
+  if (objetivo) {
+    await this.recalcularObjetivo(objetivo, user);
+  }
+
+  return this.toDTO(operacionGuardada);
+}
+
 
   // ----------------------------------------------------------------------
   // UPDATE y DELETE
