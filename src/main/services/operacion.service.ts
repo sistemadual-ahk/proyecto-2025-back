@@ -187,22 +187,13 @@ export class OperacionService {
     // - Si no hay objetivo ⇒ usamos billeteraId recibido
     let billeteraRecuperada: any;
 
-    if (objetivo) {
-      billeteraRecuperada = await this.billeteraRepository.findOneForUser(user);
-      if (!billeteraRecuperada) {
-        throw new NotFoundError(
-          `El usuario ${user} no tiene una billeteras`
-        );
-      }
-    } else {
-      billeteraRecuperada = await this.billeteraRepository.findById(
+    billeteraRecuperada = await this.billeteraRepository.findById(
         billeteraId as string
       );
       if (!billeteraRecuperada)
         throw new NotFoundError(
           `Billetera con ID ${billeteraId} no encontrada`
         );
-    }
 
     const nuevaOperacion = new Operacion();
     nuevaOperacion.monto = monto;
