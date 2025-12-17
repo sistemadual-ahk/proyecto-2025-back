@@ -13,7 +13,6 @@ export class Objetivo {
   montoActual: number;
   titulo: string;
   categoria: Categoria;
-  billetera: Billetera;
   user: any; 
 
   fechaInicio: Date;

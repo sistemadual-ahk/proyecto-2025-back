@@ -14,7 +14,6 @@ export class RepositorioDeObjetivos {
     const objetivos = await this.model
       .find({ user: uid })
       .populate("categoria")
-      .populate("billetera")
       .populate("user");
 
     return objetivos as unknown as Objetivo[];
@@ -24,7 +23,6 @@ export class RepositorioDeObjetivos {
     const objetivo = await this.model
       .findById(id)
       .populate("categoria")
-      .populate("billetera")
       .populate("user");
 
     return objetivo as unknown as Objetivo | null;
@@ -37,7 +35,6 @@ export class RepositorioDeObjetivos {
     const objetivo = await this.model
       .findOne({ _id: id, user: userId })
       .populate("categoria")
-      .populate("billetera")
       .populate("user");
 
     return objetivo as unknown as Objetivo | null;
@@ -47,7 +44,6 @@ export class RepositorioDeObjetivos {
     const objetivos = await this.model
       .find({ categoria: categoriaId })
       .populate("categoria")
-      .populate("billetera")
       .populate("user");
 
     return objetivos as unknown as Objetivo[];
@@ -61,7 +57,6 @@ export class RepositorioDeObjetivos {
           runValidators: true,
         })
         .populate("categoria")
-        .populate("billetera")
         .populate("user");
 
       return objetivoActualizado as unknown as Objetivo;
@@ -92,7 +87,6 @@ export class RepositorioDeObjetivos {
         { new: true, runValidators: true }
       )
       .populate("categoria")
-      .populate("billetera")
       .populate("user");
 
     return actualizado as unknown as Objetivo | null;

@@ -24,11 +24,6 @@ const objetivoSchema = new mongoose.Schema(
       ref: "Categoria",
       required: true,
     },
-    billetera: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Billetera",
-      required: true,
-    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Usuario",

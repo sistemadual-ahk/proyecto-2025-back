@@ -56,7 +56,6 @@ export class ObjetivoService {
       titulo,
       montoObjetivo,
       categoriaId,
-      billeteraId,
       fechaInicio,
       fechaEsperadaFinalizacion,
       fechaFin,
@@ -66,7 +65,6 @@ export class ObjetivoService {
       !titulo ||
       !montoObjetivo ||
       !categoriaId ||
-      !billeteraId ||
       !fechaInicio ||
       !fechaEsperadaFinalizacion
     ) {
@@ -78,24 +76,6 @@ export class ObjetivoService {
     const usuarioRecuperado = await this.userRepository.findById(userID);
     if (!usuarioRecuperado)
       throw new NotFoundError(`Usuario con ID ${userID} no encontrado`);
-
-    const billeteraRecuperada = await this.billeteraRepository.findById(
-      billeteraId as string
-    );
-    if (!billeteraRecuperada)
-      throw new NotFoundError(
-        `Billetera con ID ${billeteraId} no encontrada`
-      );
-
-    if (
-      (billeteraRecuperada as any).user &&
-      (billeteraRecuperada as any).user._id &&
-      (billeteraRecuperada as any).user._id.toString() !== userID
-    ) {
-      throw new ValidationError(
-        "La billetera no pertenece al usuario autenticado"
-      );
-    }
 
     const categoriaRecuperada = await this.categoriaRepository.findById(
       categoriaId as string
@@ -110,7 +90,6 @@ export class ObjetivoService {
     nuevoObjetivo.montoObjetivo = montoObjetivo;
     nuevoObjetivo.montoActual = 0;
     nuevoObjetivo.categoria = categoriaRecuperada;
-    nuevoObjetivo.billetera = billeteraRecuperada;
     nuevoObjetivo.user = usuarioRecuperado;
     nuevoObjetivo.fechaInicio = fechaInicio;
     nuevoObjetivo.fechaEsperadaFinalizacion = fechaEsperadaFinalizacion;
@@ -149,27 +128,12 @@ export class ObjetivoService {
       categoriaFinal = categoria;
     }
 
-    let billeteraFinal = objetivoExistente.billetera;
-    const billeteraIdPayload = (objetivoData as any).billeteraId;
-    if (billeteraIdPayload) {
-      const billetera = await this.billeteraRepository.findById(
-        billeteraIdPayload
-      );
-      if (!billetera) {
-        throw new NotFoundError(
-          `Billetera con ID ${billeteraIdPayload} no encontrada`
-        );
-      }
-      billeteraFinal = billetera;
-    }
-
     const actualizado: Partial<Objetivo> = {
       id,
       titulo: objetivoData.titulo ?? objetivoExistente.titulo,
       montoObjetivo:
         objetivoData.montoObjetivo ?? objetivoExistente.montoObjetivo,
       categoria: categoriaFinal,
-      billetera: billeteraFinal,
       fechaInicio: objetivoData.fechaInicio ?? objetivoExistente.fechaInicio,
       fechaEsperadaFinalizacion:
         objetivoData.fechaEsperadaFinalizacion ??
@@ -230,11 +194,6 @@ export class ObjetivoService {
         userId
       );
 
-      // fallback a la billetera del propio objetivo
-      if (!billeteraDefault && objetivo.billetera) {
-        billeteraDefault = objetivo.billetera as any;
-      }
-
       if (billeteraDefault) {
         billeteraDefault.balance =
           (billeteraDefault.balance || 0) + montoActual;
@@ -276,7 +235,6 @@ export class ObjetivoService {
       montoActual: objetivo.montoActual,
       estado: objetivo.estado,
       categoria: objetivo.categoria,
-      billetera: objetivo.billetera,
       fechaInicio: objetivo.fechaInicio,
       fechaEsperadaFinalizacion: objetivo.fechaEsperadaFinalizacion,
       fechaFin: objetivo.fechaFin,
