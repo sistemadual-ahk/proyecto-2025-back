@@ -188,10 +188,10 @@ export class OperacionService {
     let billeteraRecuperada: any;
 
     if (objetivo) {
-      billeteraRecuperada = await this.billeteraRepository.findDefault(user);
+      billeteraRecuperada = await this.billeteraRepository.findOneForUser(user);
       if (!billeteraRecuperada) {
         throw new NotFoundError(
-          `El usuario ${user} no tiene una billetera default`
+          `El usuario ${user} no tiene una billeteras`
         );
       }
     } else {

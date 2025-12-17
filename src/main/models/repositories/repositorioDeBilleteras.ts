@@ -32,6 +32,12 @@ export class RepositorioDeBilleteras {
         return billetera as unknown as Billetera | null;
     }
 
+    async findOneForUser(userId: string): Promise<Billetera | null> {
+        const uid = new Types.ObjectId(userId);
+        const billetera = await this.model.findOne({ user: uid }).populate('user', 'name _id');
+        return billetera as unknown as Billetera | null;
+    }
+
 
     async findDefault(userId?: string): Promise<Billetera | null> {
         if (!userId) {

@@ -11,7 +11,7 @@ const objetivoSchema = new mongoose.Schema(
     montoActual: {
       type: Number,
       default: 0,
-      min: 0,
+      min: -999999999999,
     },
     titulo: {
       type: String,
