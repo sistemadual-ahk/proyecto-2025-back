@@ -13,7 +13,7 @@ export const createUsuarioRoutes = (usuarioController: UsuarioController): Route
     router.get("/comparar/", usuarioController.compararUsuarios);
 
     //* endpoint para comparacion directa con criterios
-    router.get("/compararporcriterios", usuarioController.compararPorCriterios);
+    router.post("/compararporcriterios", usuarioController.compararPorCriterios);
 
     // endpoint para similares (TESTING)
     router.get("/similar/sueldo", usuarioController.getSimilarUsuarioBySueldo);
